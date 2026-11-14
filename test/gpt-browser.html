@@ -1,0 +1,23 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>工作流菜单验证</title>
+<style>body{font:15px system-ui;color:#292929;background:#f7f7f7;max-width:900px;margin:60px auto;padding:24px}.composer{display:flex;align-items:center;gap:12px;padding:12px 18px;background:#fff;border:1px solid #ddd;border-radius:32px;margin-top:240px}.composer textarea{flex:1;min-width:80px;resize:none;border:0;font:inherit;height:40px}.tools{display:flex;align-items:center}button{font:inherit;color:inherit;border:0;background:transparent;padding:8px}#result{margin-top:25px}code{overflow-wrap:anywhere}</style>
+<h1>网页工作流菜单</h1><p>本地验证：使用模拟网页、工作流与卡片文字，不连接真实 AI 网站。</p>
+<form class="composer"><button type="button" id="composer-plus-btn">＋</button><textarea id="prompt-textarea" placeholder="询问 ChatGPT">已有草稿</textarea><div class="tools"><button type="button" id="effort" aria-label="思考程度">Medium⌄</button><button type="button" aria-label="麦克风">🎙</button></div></form>
+<p id="result">点击三横线选择工作流</p><code id="command"></code>
+<script>/* AIB_GPT_ADAPTER */</script><script>
+const output = document.getElementById('result'); let submits = 0;
+document.querySelector('form').addEventListener('submit', event => { event.preventDefault(); submits++; });
+const fixtures = [{id:'wf-explain',name:'讲解题目',site:'gpt',text:'测试卡片：请逐步讲解这道题。'},{id:'wf-check',name:'检查手写',site:'gpt',text:'测试卡片：检查手写步骤并指出问题。'}];
+const testLocation = { origin:'https://chatgpt.com',pathname:'/',get href(){return 'https://chatgpt.com/';},set href(value){
+  document.getElementById('command').textContent=value;const url=new URL(value);
+  if(url.hostname==='workflows')setTimeout(()=>bridge.workflowMenu(url.searchParams.get('request'),{items:fixtures.map(({id,name,site})=>({id,name,site}))}),0);
+  if(url.hostname==='workflow'){
+    const item=fixtures.find(item=>item.id===url.searchParams.get('id'));
+    const text=JSON.stringify({text:item.text,files:[]}),context=bridge.context();bridge.prepare(context,'preview-job',text.length);bridge.append('preview-job',0,text);bridge.commit('preview-job');
+    output.textContent=bridge.read('preview-job').status==='pasted'&&submits===0?'通过：执行「'+item.name+'」，保留原草稿并追加测试内容，没有自动发送':'失败：请检查输入框';
+  }
+  if(url.hostname==='workflow-library')output.textContent='通过：工作流库管理命令已触发';
+}};
+const host={document,location:testLocation,HTMLTextAreaElement,MutationObserver,File,DataTransfer,Event,get innerWidth(){return window.innerWidth},get innerHeight(){return window.innerHeight},
+  atob:window.atob.bind(window),getSelection:window.getSelection.bind(window),setTimeout:window.setTimeout.bind(window),clearTimeout:window.clearTimeout.bind(window),setInterval:window.setInterval.bind(window),clearInterval:window.clearInterval.bind(window),addEventListener:window.addEventListener.bind(window),removeEventListener:window.removeEventListener.bind(window)};
+const bridge=AIBGPTModule.createGPTBridge(host);bridge.connect('click-test');
+</script></html>
