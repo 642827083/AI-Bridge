@@ -1,0 +1,27 @@
+JSB.require('AIBNative');
+JSB.require('AIBSettings');
+JSB.require('AIBWorkflows');
+JSB.require('AIBPetModel');
+JSB.require('AIBBuiltinPet');
+JSB.require('AIBPetPackModel');
+JSB.require('AIBPetStorage');
+JSB.require('AIBPetPackStore');
+JSB.require('AIBPetImageStore');
+JSB.require('AIBPetAnimationPlayer');
+JSB.require('AIBPetInteraction');
+JSB.require('AIBWorkflowPet');
+JSB.require('AIBPetOverlay');
+JSB.require('AIBPets');
+JSB.require('AIBNotes');
+JSB.require('web-dist/Resources');
+JSB.require('AIBMedia');
+JSB.require('AIBSites');
+JSB.require('AIBUpload');
+JSB.require('WebBridgeCommands');
+JSB.require('AIBWindow');
+JSB.require('AIBNavigationMotion');
+JSB.require('AIBPanel');
+JSB.require('AIBWorkflowRunner');
+JSB.require('AIBAddon');
+
+JSB.newAddon = createAiBridgeAddon;

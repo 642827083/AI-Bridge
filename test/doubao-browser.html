@@ -1,0 +1,34 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>豆包上传验证</title>
+<style>body{margin:0;background:#f7f7f8;color:#262626;font:14px -apple-system,sans-serif}main{max-width:820px;margin:60px auto;padding:24px}.nav{display:flex;justify-content:center;gap:32px;font-size:15px;margin-bottom:50px}.selected{color:#4d6bdf;border-bottom:3px solid #4d6bdf;padding-bottom:10px}h1{font-size:24px;font-weight:550;margin:0 0 25px}#input-engine-container{border:1px solid #e5e5e5;border-radius:18px;background:white;padding:12px 16px;--dbx-text-primary:#333;--dbx-line-10:#dedede}.tools{display:flex;align-items:center;gap:8px}.narrow{width:36px;flex:none}.tools button{font:inherit;border:0;border-radius:12px;background:transparent;color:inherit;height:36px;cursor:pointer}.model{margin-left:auto}.ProseMirror{min-height:110px;outline:0;padding:16px 2px;font-size:16px}.ProseMirror p{margin:0}#attachments{display:flex;gap:10px;margin-top:18px}.attachment{padding:8px;border:1px solid #ddd;border-radius:10px;background:white}.attachment img{display:block;width:72px;height:72px;object-fit:contain}.hint{color:#858585;font-size:12px;line-height:1.7}#result{margin-top:24px;line-height:1.7;color:#3b6d42}code{font-size:12px;overflow-wrap:anywhere}@media(max-width:440px){main{padding:20px 16px;margin-top:20px}.nav{gap:22px}.tools{gap:4px}}</style></head><body><main>
+<div class="nav"><span>DeepSeek</span><span class="selected">豆包</span><span>GPT</span><span>设置</span></div>
+<h1>豆包工作模式上传验证</h1><p class="hint">按当前工作模式工具栏结构做本地验证。点击“MN 上传”加入测试图片和文字，不连接 AI 服务，不读取真实卡片。</p>
+<style>.guidance-input-actions{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:6px;overflow:hidden}.left-tools{display:flex;flex:1;min-width:0;overflow:hidden;align-items:center;position:relative}.cloud-wrap{flex:0 0 auto}.cloud-wrap button{width:84px;background:#edf5fc;color:#2780be}.skill-list{display:flex;flex:1;min-width:0;overflow:hidden;gap:4px}.skill-list button{white-space:nowrap;flex-shrink:0}.right-controls{display:flex;flex-shrink:0;align-items:center;gap:6px}.right-controls .model{margin:0}.model button{white-space:nowrap;min-width:70px}.narrow{flex-shrink:0}.native-wrap{flex:0 0 auto}.microphone{width:32px}</style>
+<div id="input-engine-container" aria-label="doc_editor"><div><div class="tiptap ProseMirror" contenteditable="true"><p>已有草稿</p></div></div><div class="tools guidance-input-actions"><div class="left-tools"><div class="native-wrap"><div class="narrow"><button type="button" data-testid="upload_file_button" aria-label="附件">＋</button></div></div><div class="cloud-wrap"><button type="button" data-testid="chat_input_action_mode">云电脑⌄</button></div><div class="skill-list"><button type="button">项目⌄</button><button type="button">技能⌄</button><button type="button">插件⌄</button></div></div><div class="right-controls"><div class="model"><button type="button" data-testid="chat_input_action_model">自动 高⌄</button></div><button class="microphone" type="button" aria-label="麦克风">♩</button></div></div></div>
+<div id="attachments"></div><p id="result" role="status">等待点击插件“上传”按钮</p><code id="command"></code>
+<script>/* AIB_DOUBAO_ADAPTER */</script><script>
+const png = /* AIB_TEST_PNG */, output = document.querySelector('#result'), editor = document.querySelector('.ProseMirror');
+let received = 0, requests = 0, activeToken = '';
+editor.addEventListener('paste', event => {
+  const files = Array.from(event.clipboardData.files); if (!files.length) return; event.preventDefault();
+  for (const file of files) {
+    received++; const box = document.createElement('div'); box.className = 'attachment';
+    const image = new Image(); image.alt = file.name; image.src = URL.createObjectURL(file); image.onload = () => URL.revokeObjectURL(image.src);
+    box.append(image, document.createTextNode(file.name)); document.querySelector('#attachments').append(box);
+  }
+});
+const testLocation = { origin: 'https://www.doubao.com', pathname: '/chat/', get href() { return 'https://www.doubao.com/chat/'; }, set href(value) {
+  document.querySelector('#command').textContent = value;
+  if (value !== 'aibridge://upload?token=doubao-test') return;
+  requests++; activeToken = 'test-' + requests;
+  const context = bridge.context(), bundle = JSON.stringify({ text: 'MN 测试卡片原文 $x^2$\n请检查解题过程。', files: [{ name: '测试卡片.png', type: 'image/png', base64: png, bytes: atob(png).length }] });
+  bridge.prepare(context, activeToken, bundle.length); bridge.append(activeToken, 0, bundle); bridge.commit(activeToken);
+  const reply = bridge.read(activeToken);
+  output.textContent = reply.status === 'handed-off' && received === requests ? '通过：插件点击 ' + requests + ' 次，接收图片 ' + received + ' 张；草稿保留，未发送。' : '失败：' + reply.message;
+  document.title = reply.status === 'handed-off' ? '豆包上传验证通过' : '豆包上传验证失败';
+} };
+const host = { document, location: testLocation, HTMLTextAreaElement, File, DataTransfer, ClipboardEvent, Event, MutationObserver,
+ atob: window.atob.bind(window), getSelection: window.getSelection.bind(window),
+ setTimeout: window.setTimeout.bind(window), clearTimeout: window.clearTimeout.bind(window), setInterval: window.setInterval.bind(window), clearInterval: window.clearInterval.bind(window),
+ addEventListener: window.addEventListener.bind(window), removeEventListener: window.removeEventListener.bind(window) };
+const bridge = AIBDoubaoModule.createDoubaoBridge(host); bridge.connect('doubao-test');
+</script></main></body></html>

@@ -1,0 +1,24 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>Ai Bridge 浏览器验证</title><style>body{font:15px system-ui;max-width:800px;margin:40px auto;color:#263044}textarea{width:90%;height:80px}li{margin:12px 0}.pass{color:#16844f}.fail{color:#b22}</style><h1>Ai Bridge 浏览器验证</h1><p>本页使用测试文字和生成的图片，不连接 DeepSeek 服务。</p><ol id="results"></ol><div id="fixtures"></div><script>/* AIB_ADAPTER */</script><script>
+(async function(){
+const results=document.getElementById('results'), fixtures=document.getElementById('fixtures');
+let count=0,failed=0;
+function report(name,okay,detail=''){count++;if(!okay)failed++;const row=document.createElement('li');row.className=okay?'pass':'fail';row.textContent=(okay?'通过：':'失败：')+name+(detail?' — '+detail:'');results.appendChild(row);}
+const canvas=document.createElement('canvas');canvas.width=12;canvas.height=12;canvas.getContext('2d').fillRect(2,2,8,8);const data=canvas.toDataURL('image/png').split(',')[1];
+const file={name:'手写测试.png',type:'image/png',base64:data,bytes:atob(data).length};
+const location={origin:'https://chat.deepseek.com',href:'https://chat.deepseek.com/',pathname:'/'};
+const host={document,location,HTMLTextAreaElement,MutationObserver,File,DataTransfer,Event,atob:window.atob.bind(window),setInterval:window.setInterval.bind(window),clearInterval:window.clearInterval.bind(window),setTimeout:window.setTimeout.bind(window),clearTimeout:window.clearTimeout.bind(window),getSelection:window.getSelection.bind(window),addEventListener:window.addEventListener.bind(window),removeEventListener:window.removeEventListener.bind(window)};
+function make(){fixtures.innerHTML='<form><textarea placeholder="给 DeepSeek 发送消息"></textarea><div style="display:flex;align-items:center;gap:8px"><div class="ds-toggle-button" tabindex="0" aria-pressed="false"><span>深度思考</span></div><div class="ds-toggle-button" tabindex="0" aria-pressed="true" id="search"><span>智能搜索</span></div><button type="button">发送</button></div><input type="file" accept="image/*" multiple></form>';return AIBDeepSeekModule.createDeepSeekBridge(host);}
+function send(bridge,bundle,token){const target=bridge.context(),text=JSON.stringify(bundle);bridge.prepare(target,token,text.length);for(let offset=0;offset<text.length;offset+=65536)bridge.append(token,offset,text.slice(offset,offset+65536));return bridge.commit(token);}
+try{
+let bridge=make();const editor=document.querySelector('textarea');editor.value='原有草稿';let submits=0;document.querySelector('form').addEventListener('submit',e=>{e.preventDefault();submits++});
+report('文字保留草稿并追加，不提交表单',send(bridge,{text:'卡片正文 $x^2$',files:[]},'text')&&editor.value==='原有草稿\n\n卡片正文 $x^2$'&&submits===0);bridge.disconnect();
+bridge=make();let accepted=false;const input=document.querySelector('input');input.addEventListener('change',()=>{accepted=input.files instanceof FileList&&input.files[0].name===file.name&&input.files[0].size===file.bytes});
+report('浏览器真实 DataTransfer/FileList 与 change 事件',send(bridge,{text:'检查手写',files:[file]},'image')&&accepted&&bridge.read('image').status==='handed-off');bridge.disconnect();
+bridge=make();document.querySelector('input').remove();document.querySelector('textarea').value='保留';report('缺少附件控件时保留原草稿',!send(bridge,{text:'不能追加',files:[file]},'missing')&&document.querySelector('textarea').value==='保留');bridge.disconnect();
+bridge=make();const snapshot=bridge.context(),text=JSON.stringify({text:'旧对话内容',files:[]});bridge.prepare(snapshot,'nav',text.length);bridge.append('nav',0,text);location.href='https://chat.deepseek.com/a/other';report('切换对话后停止提交',!bridge.commit('nav')&&document.querySelector('textarea').value==='');bridge.disconnect();location.href='https://chat.deepseek.com/';
+bridge=make();bridge.connect('test');bridge.connect('test2');report('重复连接只显示一个上传按钮',document.querySelectorAll('#aib-upload-button').length===1);
+const action=document.querySelector('#aib-upload-button'),search=document.getElementById('search');report('上传位于智能搜索右侧同一行',search.nextElementSibling===action&&Math.abs(action.getBoundingClientRect().top-search.getBoundingClientRect().top)<8);bridge.disconnect();
+}catch(error){report('浏览器执行',false,error.message)}
+fixtures.style.display='none';document.title='Ai Bridge 浏览器验证：'+(count-failed)+'/'+count+' 通过';const summary=document.createElement('p');summary.id='summary';summary.textContent='结果：'+(count-failed)+'/'+count+' 通过';results.after(summary);
+})();
+</script></html>

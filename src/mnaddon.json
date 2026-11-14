@@ -1,0 +1,10 @@
+{
+  "addonid": "cn.marginnote.ai-bridge",
+  "title": "Ai Bridge",
+  "author": "乔木Joe",
+  "version": "1.0.0",
+  "marginnote_version_min": "4.5.0",
+  "icon": "icon.png",
+  "panel": "web-dist/MediaReader.html",
+  "cert_key": ""
+}
