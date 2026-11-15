@@ -31,6 +31,7 @@ var AIBWorkflows = (function () {
     var store = location();
     if (!store.manager.fileExistsAtPath(store.root) && !store.manager.createDirectoryAtPathWithIntermediateDirectoriesAttributes(store.root, true, null)) throw new Error('无法创建工作流目录');
     var next = { schema: 1, revision: N.token(), items: record.items }, data = NSJSONSerialization.dataWithJSONObjectOptions(next, 0);
+    if (data && Number(N.value(data, 'length')) > 1024 * 1024) throw new Error('工作流总内容超过 1 MB，请缩短提示词后重试');
     if (!data || typeof data.writeToFileAtomically !== 'function' || !data.writeToFileAtomically(store.root + '/workflows.json', true)) throw new Error('工作流保存失败，原工作流已保留');
     return next;
   }
@@ -53,6 +54,17 @@ var AIBWorkflows = (function () {
     var record = current(payload), index = record.items.findIndex(function (item) { return item.id === payload.id; });
     if (index < 0) throw new Error('工作流已被删除，请刷新列表');
     record.items.splice(index, 1); return write(record);
+  }
+  function append(payload) {
+    var record = current(payload);
+    if (!Array.isArray(payload.items) || !payload.items.length || record.items.length + payload.items.length > MAX) throw new Error('最多保存 20 个工作流，请减少导入数量');
+    var names = record.items.map(function (item) { return item.name.toLowerCase(); });
+    var additions = payload.items.map(function (input) {
+      var item = validate(input), key = item.name.toLowerCase();
+      if (!AIBSettings.siteAvailable(item.site) || names.indexOf(key) >= 0) throw new Error('导入条目无效或名称冲突，请重新选择文件');
+      names.push(key); item.id = 'wf-' + N.token(); return item;
+    });
+    record.items = record.items.concat(additions); return write(record);
   }
   function move(payload) {
     var record = current(payload);
@@ -77,5 +89,5 @@ var AIBWorkflows = (function () {
     record = record || read();
     return { schema: record.schema, revision: record.revision, items: record.items.filter(function (item) { return AIBSettings.siteAvailable(item.site); }) };
   }
-  return { read: read, save: save, remove: remove, move: move, get: get, validate: validate, visible: visible };
+  return { read: read, save: save, append: append, remove: remove, move: move, get: get, validate: validate, visible: visible };
 })();

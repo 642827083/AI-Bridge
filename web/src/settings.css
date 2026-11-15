@@ -14,3 +14,29 @@ h2{font-size:15px;font-weight:600;margin:0 0 12px}.group-heading{display:flex;al
 
 .pet-delete-row{display:flex;gap:10px;flex-wrap:wrap;padding:0 20px 18px}.pet-delete-row #pet-delete{color:#b54343}
 .workflow-actions{display:flex;align-items:center;flex-wrap:nowrap;gap:8px}.workflow-actions .quiet{min-width:32px;white-space:nowrap;text-align:center;background:transparent}.workflow-actions .workflow-move{color:#697384;font-size:17px}.workflow-description{flex:1}@media(max-width:440px){.workflow-description{flex-basis:100%}}
+
+body.pet-editing{overflow:hidden}
+#workflow-transfer-status{margin:0;padding:0 20px;font-size:12px;color:#7a8190;min-height:18px;overflow-wrap:anywhere}#workflow-transfer-status[data-error=true]{color:#b54343}.workflow-footer>.quiet{white-space:nowrap;flex-shrink:0}
+.workflow-toolbar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.workflow-toolbar button{padding:8px 12px}.workflow-transfer-heading{padding:18px 20px 12px}.workflow-transfer-heading h3{margin:0;font-size:14px;outline:none}.workflow-transfer-heading p{font-size:12px;color:#858a94;line-height:1.7;margin:8px 0}.workflow-transfer-tools{display:flex;align-items:center;gap:16px;font-size:12px;color:#858a94}.workflow-transfer-tools span{margin-right:auto}.workflow-transfer-choice{display:flex;align-items:flex-start;gap:12px;padding:14px 20px;border-top:1px solid #eeeff2;cursor:pointer;overflow-wrap:anywhere}.workflow-transfer-choice input{width:18px;height:18px;flex-shrink:0;margin:2px 0 0;accent-color:#4d6bdf}.workflow-transfer-choice span{min-width:0}.workflow-prompt-preview{white-space:pre-line;color:#a0a5af}#workflow-transfer{margin-bottom:16px;scroll-margin-top:80px}#workflow-editor{scroll-margin-top:80px}@media(max-width:440px){#workflows{align-items:center;gap:8px}#workflows h2{white-space:nowrap}.workflow-toolbar{gap:6px}.workflow-toolbar button{padding:8px 10px;font-size:12px}.workflow-transfer-heading{padding:15px}.workflow-transfer-choice{padding:14px 15px}}@media(min-width:441px) and (max-width:620px){.workflow-row{flex-wrap:wrap}.workflow-description{flex-basis:100%}.workflow-actions{margin-left:auto}}
+#pet-editor{position:fixed;inset:0;z-index:10;background:#f6f6f8;height:100%;overflow:hidden}
+.pet-import-page{width:100%;max-width:720px;height:100%;margin:0 auto;padding:0 28px;display:flex;flex-direction:column}
+.pet-import-page .pet-editor-heading{flex-shrink:0;padding:20px 2px 16px}
+#pet-editor-title{font-size:18px;font-weight:650;margin:0;outline:none}
+.pet-editor-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 0 16px}
+.pet-import-page .pet-edit-grid{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0}
+.pet-crop-preview{display:flex;flex-direction:column;align-items:center;padding:18px 20px 16px;background:#fafbfc;border-bottom:1px solid #eeeff2}
+.pet-import-page #pet-crop{width:clamp(120px,32vh,240px);max-width:100%;height:auto;flex-shrink:0;cursor:grab}
+.pet-import-page #pet-crop:active{cursor:grabbing}
+.pet-crop-preview small{margin-top:10px}
+.pet-import-page .pet-edit-fields{padding:18px 20px;gap:16px;font-size:13px}
+.pet-edit-fields label>span{display:flex;justify-content:space-between;gap:12px}
+.pet-import-page #pet-name{display:block;margin-top:8px;padding:11px 12px}
+.pet-import-page #pet-zoom{display:block;margin-top:10px}
+.pet-import-page #pet-reset{justify-self:start;min-height:40px}
+.pet-import-footer{flex-shrink:0;padding:8px 0 max(14px,env(safe-area-inset-bottom));background:#f6f6f8;border-top:1px solid #e7e8ed}
+#pet-editor-status{color:#7a8190;font-size:12px;line-height:1.5;min-height:18px;margin:0 2px 8px;overflow-wrap:anywhere}
+#pet-editor-status[data-error=true]{color:#b54343}
+.pet-import-footer .pet-edit-actions{padding:0;gap:12px}
+.pet-import-footer button{min-height:44px;padding:10px 22px;touch-action:manipulation}
+.pet-import-footer button:active:not(:disabled){filter:brightness(.95)}
+@media(max-width:440px){.pet-import-page{padding:0 16px}.pet-import-page .pet-editor-heading{padding-top:16px}.pet-import-page .pet-edit-fields{padding:16px}.pet-import-footer button{flex:1}}

@@ -41,7 +41,7 @@ var AIBPanel = (function () {
     var changed = name !== controller.activePage;
     if (changed) { AIBUpload.cancel(controller); AIBWorkflowRunner.cancel(controller); }
     controller.activePage = name;
-    if (name !== 'settings') AIBPets.cancel(controller.addon);
+    if (name !== 'settings') { AIBPets.cancel(controller.addon); AIBWorkflowFiles.cancel(controller); }
     else N.evaluate(controller.settingsView, 'window.__AIB_PET_REFRESH__&&window.__AIB_PET_REFRESH__()').catch(function () {});
     controller.webView.hidden = name !== 'deepseek'; controller.doubaoView.hidden = name !== 'doubao'; controller.gptView.hidden = name !== 'gpt'; controller.geminiView.hidden = name !== 'gemini'; controller.settingsView.hidden = name !== 'settings';
     var blue = UIColor.colorWithRedGreenBlueAlpha(0.30, 0.42, 0.87, 1);
@@ -137,6 +137,7 @@ var AIBPanel = (function () {
     if (AIBSites.get(controller)) inject(controller).catch(function () {});
   }
   function hide(controller) {
+    AIBWorkflowFiles.cancel(controller);
     AIBWorkflowRunner.cancel(controller);
     AIBNavigationMotion.stop(controller.indicator);
     AIBPets.cancel(controller.addon);
@@ -146,6 +147,7 @@ var AIBPanel = (function () {
   }
   function dispose(controller) {
     if (!controller) return;
+    AIBWorkflowFiles.cancel(controller);
     AIBWorkflowRunner.cancel(controller);
     AIBNavigationMotion.stop(controller.indicator);
     AIBPets.cancel(controller.addon);

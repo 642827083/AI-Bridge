@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ai Bridge 设置</title><style>/* AIB_STYLE */</style></head>
 <body>
-<main>
+<main id="settings-main">
   <div class="settings-navigation-wrap">
     <nav class="settings-navigation" role="tablist" aria-label="设置分类">
       <span class="settings-navigation-slider" aria-hidden="true"></span>
@@ -12,9 +12,16 @@
     </nav>
   </div>
   <div id="workflows-panel" role="tabpanel" aria-labelledby="workflows-tab" hidden>
-  <div id="workflows" class="group-heading"><h2>工作流库</h2><button id="workflow-new" type="button" class="secondary" disabled>新增工作流</button></div>
+  <div id="workflows" class="group-heading"><h2>工作流库</h2><div class="workflow-toolbar"><button id="workflow-import" type="button" class="secondary" disabled>导入</button><button id="workflow-export" type="button" class="secondary" disabled>导出</button><button id="workflow-new" type="button" disabled>新增工作流</button></div></div>
+  <input id="workflow-file" type="file" accept=".json,application/json" hidden>
   <p class="hint workflow-hint">网页内执行上传到当前 AI；桌宠执行打开指定 AI。选中卡片后，通过三横线选择工作流，内容填入后由你点击发送。</p>
-  <section aria-label="工作流管理">
+  <section id="workflow-transfer" aria-labelledby="workflow-transfer-title" hidden>
+    <div class="workflow-transfer-heading"><h3 id="workflow-transfer-title" tabindex="-1">导入工作流</h3><p id="workflow-transfer-help"></p><div class="workflow-transfer-tools"><span id="workflow-transfer-count"></span><button id="workflow-select-all" class="quiet" type="button">全选</button><button id="workflow-select-none" class="quiet" type="button">清空选择</button></div></div>
+    <div id="workflow-transfer-list"></div>
+    <p id="workflow-transfer-status" role="status" aria-live="polite"></p>
+    <div class="pet-edit-actions"><button id="workflow-transfer-cancel" class="secondary" type="button">取消</button><button id="workflow-transfer-confirm" type="button">确认导入</button></div>
+  </section>
+  <section id="workflow-management" aria-label="工作流管理">
     <div id="workflow-list"></div>
     <form id="workflow-editor" hidden>
       <fieldset id="workflow-fields">
@@ -45,14 +52,11 @@
     <input id="pet-pack-file" type="file" accept=".mnpet" hidden><input id="pet-image-file" type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" hidden>
     <p class="pet-format">动作包支持 .mnpet；图片支持 PNG、JPG、WebP。导入后自动显示。</p>
     <div id="pet-sources" class="pet-sources" role="group" aria-label="切换桌宠"><button id="pet-use-builtin" class="secondary" type="button">自带 · 哦鲸鲸</button><button id="pet-use-pack" class="secondary" type="button">动作桌宠</button><button id="pet-use-image" class="secondary" type="button">图片桌宠</button></div>
-    <div id="pet-delete-row" class="pet-delete-row" hidden><button id="pet-delete" class="quiet" type="button">删除当前桌宠</button><button id="pet-delete-cancel" class="quiet" type="button" hidden>取消</button></div>
+    <div id="pet-delete-row" class="pet-delete-row" hidden><button id="pet-edit" class="secondary" type="button" hidden>编辑桌宠</button><button id="pet-delete" class="quiet" type="button">删除当前桌宠</button><button id="pet-delete-cancel" class="quiet" type="button" hidden>取消</button></div>
     <div class="divider"></div>
     <div class="pet-sliders"><label for="pet-size"><span>大小 <output id="pet-size-value">112</output></span><input id="pet-size" type="range" min="64" max="128" step="1" value="112" disabled></label><label for="pet-opacity"><span>不透明度 <output id="pet-opacity-value">100%</output></span><input id="pet-opacity" type="range" min="35" max="100" step="1" value="100" disabled></label></div>
-    <div id="pet-editor" hidden>
-      <div class="divider"></div><div class="pet-editor-heading"><strong>调整图片</strong><small>拖动图片或调整缩放，保留透明背景。</small></div>
-      <div class="pet-edit-grid"><canvas id="pet-crop" width="256" height="256" tabindex="0" role="img" aria-label="桌宠图片裁剪，可拖动或使用方向键调整"></canvas><div class="pet-edit-fields"><label for="pet-name">桌宠名称</label><input id="pet-name" maxlength="24" value="我的桌宠"><label for="pet-zoom">图片缩放 <output id="pet-zoom-value">100%</output></label><input id="pet-zoom" type="range" min="50" max="400" value="100"><button id="pet-reset" type="button" class="quiet">重置图片位置</button></div></div>
-      <div class="pet-edit-actions"><button id="pet-cancel" type="button" class="secondary">取消</button><button id="pet-confirm" type="button">导入并显示</button></div>
-    </div>
+    <div class="divider"></div>
+    <label class="row" for="pet-menu-mode"><span><strong>右上角按钮</strong><small>点击显示时约 5 秒后收起，菜单展开时保留</small></span><select id="pet-menu-mode" disabled><option value="always">常显</option><option value="tap">点击桌宠时显示</option></select></label>
     <p id="pet-status" role="status" aria-live="polite">正在读取桌宠…</p>
   </section>
   </div>
@@ -73,6 +77,18 @@
     <p id="navigation-status" role="status" aria-live="polite">正在读取导航栏设置…</p>
   </div>
 </main>
+<div id="pet-editor" role="dialog" aria-modal="true" aria-labelledby="pet-editor-title" aria-describedby="pet-editor-help" hidden>
+  <div class="pet-import-page">
+    <header class="pet-editor-heading"><h2 id="pet-editor-title" tabindex="-1">导入桌宠</h2><small id="pet-editor-help">拖动图片调整位置，确认后显示为你的桌宠。</small></header>
+    <div id="pet-editor-content" class="pet-editor-content">
+      <section class="pet-edit-grid" aria-label="图片预览与调整">
+        <div class="pet-crop-preview"><canvas id="pet-crop" width="256" height="256" tabindex="0" role="img" aria-label="桌宠图片裁剪，可拖动或使用方向键调整"></canvas><small>预览效果 · 保留透明背景</small></div>
+        <div class="pet-edit-fields"><label for="pet-name">桌宠名称<input id="pet-name" maxlength="24" value="我的桌宠" autocomplete="off"></label><label for="pet-zoom"><span>图片缩放 <output id="pet-zoom-value">100%</output></span><input id="pet-zoom" type="range" min="50" max="400" value="100"></label><button id="pet-reset" type="button" class="quiet">重置图片位置</button></div>
+      </section>
+    </div>
+    <footer class="pet-import-footer"><p id="pet-editor-status" role="status" aria-live="polite"></p><div class="pet-edit-actions"><button id="pet-cancel" type="button" class="secondary">取消</button><button id="pet-confirm" type="button">确认导入</button></div></footer>
+  </div>
+</div>
 <script>window.__AIB_SETTINGS_TOKEN__="__AIB_TOKEN_VALUE__";</script>
 <script>/* AIB_APP */</script>
 </body></html>

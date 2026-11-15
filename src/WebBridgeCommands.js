@@ -16,6 +16,7 @@ var AIBWebCommands = (function () {
       else if (request.command === 'saveWorkflow') payload = AIBWorkflows.visible(AIBWorkflows.save(request.payload));
       else if (request.command === 'deleteWorkflow') payload = AIBWorkflows.visible(AIBWorkflows.remove(request.payload));
       else if (request.command === 'moveWorkflow') payload = AIBWorkflows.visible(AIBWorkflows.move(request.payload));
+      else if (['prepareWorkflowImport', 'commitWorkflowImport', 'cancelWorkflowImport', 'exportWorkflows'].indexOf(request.command) >= 0) payload = AIBWorkflowFiles.command(controller, request.command, request.payload);
       else if (request.command === 'getNavigation') payload = AIBSettings.readNavigation();
       else if (request.command === 'saveNavigation') {
         payload = AIBSettings.writeNavigation(request.payload); AIBPanel.refreshNavigation(controller);

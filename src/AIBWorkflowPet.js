@@ -35,13 +35,27 @@ var AIBWorkflowPet = (function () {
       sibling = view;
     });
   }
+  function dismissLater(s) {
+    AIBPetOverlay.cancelTimer(s, 'petMenuHideTimer');
+    if (s.settings.menuButtonMode !== 'tap' || !s.workflowButtonRevealed || s.workflowMenu || !s.active || !s.view || !s.view.superview) return;
+    AIBPetOverlay.schedule(s, 'petMenuHideTimer', 5, function () {
+      if (s.workflowMenu || s.settings.menuButtonMode !== 'tap') return;
+      s.workflowButtonRevealed = false;
+      if (s.workflowButton) s.workflowButton.hidden = true;
+    });
+  }
+  function revealButton(s) {
+    if (!s.workflowButton || !s.active || !s.settings.visible || !s.view || !s.view.superview) return;
+    if (s.settings.menuButtonMode === 'tap') s.workflowButtonRevealed = true;
+    s.workflowButton.hidden = false; dismissLater(s); stack(s);
+  }
   function close(s) {
     if (s.workflowMenu) s.workflowMenu.removeFromSuperview();
     s.workflowMenu = null; s.workflowMenuButtons = []; s.workflowMenuItems = [];
     s.workflowScroll = null; s.workflowEmpty = null; s.workflowManageButton = null;
     s.workflowRowLabels = []; s.workflowTitle = null; s.workflowCount = null; s.workflowDivider = null;
     if (s.workflowButton) s.workflowButton.accessibilityLabel = '展开工作流';
-    stack(s);
+    stack(s); dismissLater(s);
   }
   function geometry(bounds, pet, count) {
     var width = Math.min(228, bounds.width - 16), content = Math.max(count, 1) * 48;
@@ -92,15 +106,24 @@ var AIBWorkflowPet = (function () {
       });
       s.workflowButton.accessibilityLabel = '展开工作流';
     }
+    if (s.workflowButtonMode !== s.settings.menuButtonMode) {
+      s.workflowButtonMode = s.settings.menuButtonMode; s.workflowButtonRevealed = false;
+      close(s); AIBPetOverlay.cancelTimer(s, 'petMenuHideTimer');
+    }
+    s.workflowButton.hidden = s.settings.menuButtonMode === 'tap' && !s.workflowButtonRevealed && !s.workflowMenu;
     if (s.workflowButton.superview !== s.view.superview) s.view.superview.addSubview(s.workflowButton);
     layout(s);
   }
-  function hide(s) { close(s); if (s.workflowButton) s.workflowButton.removeFromSuperview(); }
+  function hide(s) {
+    close(s); s.workflowButtonRevealed = false; AIBPetOverlay.cancelTimer(s, 'petMenuHideTimer');
+    if (s.workflowButton) { s.workflowButton.hidden = true; s.workflowButton.removeFromSuperview(); }
+  }
   function toggle(addon) {
     var s = addon.petSession;
-    if (!s || !s.active || !s.view || !s.view.superview || !s.settings.visible) return;
+    if (!s || !s.active || !s.view || !s.view.superview || !s.settings.visible || !s.workflowButton || s.workflowButton.hidden) return;
     try {
       if (s.workflowMenu) { close(s); return; }
+      AIBPetOverlay.cancelTimer(s, 'petMenuHideTimer');
       var items = AIBWorkflows.visible().items;
       if (typeof UIScrollView === 'undefined') throw new Error('当前 MN 缺少工作流菜单滚动接口');
       var menu = s.workflowMenu = new UIView(rect(0, 0, 228, 124)); surface(menu, 14);
@@ -143,5 +166,5 @@ var AIBWorkflowPet = (function () {
     if (!controller.openWorkflows || controller.activePage !== 'settings') return;
     N.evaluate(controller.settingsView, 'Boolean(window.__AIB_OPEN_WORKFLOWS__&&window.__AIB_OPEN_WORKFLOWS__())').then(function (opened) { if (opened === true || opened === 'true') controller.openWorkflows = false; }).catch(function () {});
   }
-  return { show: show, hide: hide, layout: layout, close: close, toggle: toggle, select: select, manage: manage, reveal: reveal, geometry: geometry, stack: stack };
+  return { show: show, hide: hide, layout: layout, close: close, toggle: toggle, select: select, manage: manage, reveal: reveal, revealButton: revealButton, geometry: geometry, stack: stack };
 })();

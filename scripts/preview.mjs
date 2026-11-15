@@ -34,6 +34,9 @@ const server = createServer((request, response) => {
       let value;
       try {
         const { command, payload } = JSON.parse(body);
+        if (['prepareWorkflowImport', 'commitWorkflowImport', 'cancelWorkflowImport', 'exportWorkflows'].includes(command)) {
+          value = petNative.context.AIBWorkflowFiles.command(petScene.controller, command, payload);
+        } else
         value = command === 'getWorkflows' ? petNative.context.AIBWorkflows.visible() : command === 'saveWorkflow' ? petNative.context.AIBWorkflows.visible(petNative.context.AIBWorkflows.save(payload)) : command === 'deleteWorkflow' ? petNative.context.AIBWorkflows.visible(petNative.context.AIBWorkflows.remove(payload)) : command === 'moveWorkflow' ? petNative.context.AIBWorkflows.visible(petNative.context.AIBWorkflows.move(payload)) : command === 'getNavigation' ? navigation : command === 'saveNavigation' ? (navigation = payload) : command === 'getSettings' ? demo : command === 'saveSettings' ? payload : petScene.command(command, payload);
       } catch (error) { value = { error: error.message }; }
       response.writeHead(200, { 'Content-Type': 'application/json' }); response.end(JSON.stringify(value));

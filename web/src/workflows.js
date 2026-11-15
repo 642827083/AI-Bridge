@@ -1,4 +1,5 @@
 import { MNBridge } from './lib/mnBridge.js';
+import { WorkflowFiles } from './workflow-files.js';
 
 const sites = { deepseek: 'DeepSeek', gpt: 'GPT', gemini: 'Gemini' };
 const handwriting = { last: '卡片最后一条手写', mindmap: '脑图手写', none: '无手写' };
@@ -9,6 +10,7 @@ export class Workflows {
     this.fields = document.getElementById('workflow-fields'); this.status = document.getElementById('workflow-status');
     this.name = document.getElementById('workflow-name'); this.site = document.getElementById('workflow-site');
     this.handwriting = document.getElementById('workflow-handwriting'); this.prompt = document.getElementById('workflow-prompt');
+    this.files = new WorkflowFiles(this);
     document.getElementById('workflow-new').addEventListener('click', () => this.edit());
     document.getElementById('workflow-refresh').addEventListener('click', () => this.load());
     document.getElementById('workflow-cancel').addEventListener('click', () => { this.draft = null; this.message(''); this.render(); });
@@ -19,13 +21,17 @@ export class Workflows {
     this.form.addEventListener('submit', event => { event.preventDefault(); this.save(); });
     window.__AIB_OPEN_WORKFLOWS__ = () => {
       document.getElementById('workflows-tab').click(); document.getElementById('workflows').scrollIntoView?.({ block: 'start' });
-      if (!this.draft) this.load(); return true;
+      if (!this.draft && !this.files.opened) this.load(); return true;
     };
     this.load();
   }
-  message(text, error = false) { this.status.textContent = text; this.status.dataset.error = String(error); }
+  message(text, error = false) {
+    this.status.textContent = text; this.status.dataset.error = String(error);
+    const transferStatus = document.getElementById('workflow-transfer-status');
+    transferStatus.textContent = text; transferStatus.dataset.error = String(error);
+  }
   async load() {
-    if (this.busy) return;
+    if (this.busy || this.files.opened) return;
     this.busy = true; this.render();
     try { this.record = await MNBridge.send('getWorkflows'); this.message(this.draft ? '列表已刷新；如有冲突，请取消后重新编辑。当前草稿已保留。' : ''); }
     catch (error) { this.message(error.message, true); }
@@ -37,8 +43,10 @@ export class Workflows {
   }
   render() {
     this.form.hidden = !this.draft; this.fields.disabled = this.busy;
-    document.getElementById('workflow-new').disabled = this.busy || !this.record || !!this.draft || this.record.items.length >= 20;
-    document.getElementById('workflow-refresh').disabled = this.busy;
+    const locked = this.busy || !!this.draft || this.files.opened;
+    document.getElementById('workflow-new').disabled = locked || !this.record || this.record.items.length >= 20;
+    document.getElementById('workflow-refresh').disabled = this.busy || this.files.opened;
+    this.files.render();
     this.list.replaceChildren();
     const items = (this.record?.items || []).filter(item => sites[item.site]);
     if (!items.length) {
@@ -50,7 +58,7 @@ export class Workflows {
       const name = document.createElement('strong'); name.textContent = item.name;
       const detail = document.createElement('small'); detail.textContent = this.summary(item); description.append(name, detail);
       const actions = document.createElement('div'); actions.className = 'workflow-actions';
-      const action = (title, callback) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'quiet'; button.textContent = title; button.disabled = this.busy || !!this.draft; button.addEventListener('click', callback); actions.append(button); return button; };
+      const action = (title, callback) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'quiet'; button.textContent = title; button.disabled = locked; button.addEventListener('click', callback); actions.append(button); return button; };
       for (const [direction, title, symbol, edge] of [[-1, '上移', '↑', index === 0], [1, '下移', '↓', index === items.length - 1]]) {
         const button = action(symbol, () => this.move(item, direction));
         button.classList.add('workflow-move'); button.dataset.direction = String(direction);
@@ -58,19 +66,32 @@ export class Workflows {
         button.disabled ||= edge;
       }
       action('编辑', () => this.edit(item)).dataset.action = 'edit';
+      const copy = action('复制', () => this.copy(item)); copy.dataset.action = 'copy'; copy.disabled ||= this.record.items.length >= 20;
       action(this.deleting === item.id ? '确认删除' : '删除', () => { if (this.deleting === item.id) this.remove(item); else { this.deleting = item.id; this.render(); } }).dataset.action = 'delete';
       if (this.deleting === item.id) action('取消', () => { this.deleting = ''; this.render(); });
       row.append(description, actions); this.list.append(row);
     }
   }
   edit(item) {
-    if (this.busy || !this.record || this.draft) return;
+    if (this.busy || !this.record || this.draft || this.files.opened) return;
     this.draft = { id: item?.id || '', expectedRevision: this.record.revision };
     this.name.value = item?.name || ''; this.site.value = item?.site || 'deepseek'; this.handwriting.value = item?.handwriting || 'none'; this.prompt.value = item?.extraText || '';
     this.selected = new Set(item?.cardItems || [1]); this.shown = 6; this.deleting = '';
     document.getElementById('workflow-editor-title').textContent = item ? '编辑工作流' : '新增工作流';
     document.getElementById('workflow-card-picker').open = false;
     this.message(''); this.choices(); this.render(); this.name.focus();
+  }
+  copy(item) {
+    if (this.busy || this.draft || this.files.opened || !this.record || this.record.items.length >= 20) return;
+    let name, index = 1;
+    do {
+      const suffix = index === 1 ? '（副本）' : '（副本' + index + '）';
+      name = item.name.slice(0, 24 - suffix.length).replace(/[\uD800-\uDBFF]$/, '') + suffix; index++;
+    } while (this.record.items.some(value => value.name.toLowerCase() === name.toLowerCase()));
+    this.edit({ ...item, id: '', name });
+    document.getElementById('workflow-editor-title').textContent = '复制工作流';
+    this.message('已复制设置，修改后点击“保存工作流”创建副本。');
+    this.form.scrollIntoView?.({ block: 'start' });
   }
   collapse() { this.shown = 6; if (this.selected) this.choices(); }
   choices() {
@@ -99,14 +120,14 @@ export class Workflows {
     finally { this.busy = false; this.render(); }
   }
   async remove(item) {
-    if (this.busy || this.draft) return;
+    if (this.busy || this.draft || this.files.opened) return;
     this.busy = true; this.render();
     try { this.record = await MNBridge.send('deleteWorkflow', { expectedRevision: this.record.revision, id: item.id }); this.deleting = ''; this.message('工作流已删除'); }
     catch (error) { this.message(error.message, true); }
     finally { this.busy = false; this.render(); }
   }
   async move(item, direction) {
-    if (this.busy || this.draft || !this.record) return;
+    if (this.busy || this.draft || this.files.opened || !this.record) return;
     this.busy = true; this.deleting = ''; this.render(); this.message('正在保存顺序…');
     try {
       this.record = await MNBridge.send('moveWorkflow', { expectedRevision: this.record.revision, id: item.id, direction });

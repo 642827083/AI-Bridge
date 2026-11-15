@@ -1,6 +1,7 @@
 JSB.require('AIBNative');
 JSB.require('AIBSettings');
 JSB.require('AIBWorkflows');
+JSB.require('AIBWorkflowFiles');
 JSB.require('AIBPetModel');
 JSB.require('AIBBuiltinPet');
 JSB.require('AIBPetPackModel');

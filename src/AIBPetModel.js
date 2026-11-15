@@ -3,6 +3,7 @@ var AIBPetModel = (function () {
   function normalize(raw) {
     raw = raw || {}; var p = raw.position || {};
     return { visible: typeof raw.visible === 'boolean' ? raw.visible : true,
+      menuButtonMode: raw.menuButtonMode === 'tap' ? 'tap' : 'always',
       size: Math.round(clamp(raw.size, 64, 128, 112)), opacity: clamp(raw.opacity, 0.35, 1, 1),
       source: ['image', 'pack'].indexOf(raw.source) >= 0 ? raw.source : 'builtin', position: { x: clamp(p.x, 0, 1, 0.88), y: clamp(p.y, 0, 1, 0.83) } };
   }
@@ -14,6 +15,7 @@ var AIBPetModel = (function () {
     Object.keys(changes).forEach(function (key) {
       var value = changes[key];
       if (key === 'visible' && typeof value === 'boolean' || key === 'source' && ['builtin', 'image', 'pack'].indexOf(value) >= 0 ||
+          key === 'menuButtonMode' && ['always', 'tap'].indexOf(value) >= 0 ||
           ['size', 'opacity'].indexOf(key) >= 0 && typeof value === 'number' && isFinite(value)) result[key] = value;
       else throw new Error('不支持的桌宠设置');
     });

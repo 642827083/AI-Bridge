@@ -30,7 +30,7 @@ function panel(sites = ['deepseek', 'gpt', 'gemini'], nativeWindow = false) {
     NSURL: { URLWithString: url => url }, NSURLRequest: { requestWithURL: url => url },
     AIBNative: { preference: (key, fallback) => key === 'navigationSites' && sites !== null ? JSON.stringify({ schema: 3, sites }) : fallback, save: () => {}, token: () => 'test', evaluate: async () => 'about:blank', address: request => request.url, value: (object, key) => object?.[key] }, AIBResources: { settingsHTML: '', deepseek: 'deepseek-script', doubao: 'doubao-script', gpt: 'gpt-script', gemini: 'gemini-script' },
     AIBUpload: { cancel(controller) { controller.uploadOperation = null; }, async call() {} }, AIBWindow: { layout() {} }, AIBPets: { cancel() {}, front() {} },
-    AIBWorkflowRunner: { cancel(controller) { controller.workflowRun = null; } }, AIBWorkflowPet: { reveal() {} },
+    AIBWorkflowRunner: { cancel(controller) { controller.workflowRun = null; } }, AIBWorkflowPet: { reveal() {} }, AIBWorkflowFiles: { cancel(controller) { controller.workflowImport = null; } },
     NSUserDefaults: { standardUserDefaults: () => ({ objectForKey: key => values.get(key), setObjectForKey: (value, key) => values.set(key, value) }) },
     JSB: { defineClass: (name, definition) => { methods = definition; return { new: () => ({ view: new View() }) }; } }
   });

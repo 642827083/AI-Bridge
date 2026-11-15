@@ -81,6 +81,7 @@ var AIBPetInteraction = (function () {
   }
   function tap(s, gesture) {
     if (!gesture || gesture.state !== 3 || !mounted(s) || s.dragOrigin || Date.now() < (s.suppressTapUntil || 0)) return;
+    AIBWorkflowPet.revealButton(s);
     if (s.settings.source === 'builtin') {
       if (s.petPressed) release(s, s.view);
       else if (!s.petSquash) { press(s, s.view); release(s, s.view); }

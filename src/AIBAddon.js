@@ -1,7 +1,7 @@
 function createAiBridgeAddon(mainPath) {
   return JSB.defineClass('AiBridgeAddon : JSExtension <UIWebViewDelegate>', {
     sceneWillConnect: function () { self.petMainPath = mainPath; AIBPets.later(self, mainPath); },
-    sceneWillResignActive: function () { if (self.panelController) { AIBWorkflowRunner.cancel(self.panelController); AIBUpload.cancel(self.panelController); } AIBPets.active(self, false); },
+    sceneWillResignActive: function () { if (self.panelController) { AIBWorkflowFiles.cancel(self.panelController); AIBWorkflowRunner.cancel(self.panelController); AIBUpload.cancel(self.panelController); } AIBPets.active(self, false); },
     sceneDidBecomeActive: function () { AIBPets.active(self, true); },
     notebookWillOpen: function () { if (self.panelController) { AIBWorkflowRunner.cancel(self.panelController); AIBUpload.cancel(self.panelController); } AIBPets.later(self, mainPath); },
     documentDidOpen: function () { AIBPets.later(self, mainPath); },
@@ -38,6 +38,6 @@ function createAiBridgeAddon(mainPath) {
         AIBNative.app().showHUD(String(error.message || error), addon.window, 3);
       }
     }
-  }, { addonDidConnect: function () { console.log('[Ai Bridge] 已加载'); }, addonWillDisconnect: function () { AIBPets.disposeAll(); },
-    applicationDidEnterBackground: function () { AIBPets.background(true); }, applicationWillEnterForeground: function () { AIBPets.background(false); } });
+  }, { addonDidConnect: function () { console.log('[Ai Bridge] 已加载'); }, addonWillDisconnect: function () { AIBWorkflowFiles.cancelAll(); AIBPets.disposeAll(); },
+    applicationDidEnterBackground: function () { AIBWorkflowFiles.cancelAll(); AIBPets.background(true); }, applicationWillEnterForeground: function () { AIBPets.background(false); } });
 }
