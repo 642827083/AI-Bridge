@@ -1,5 +1,5 @@
 export function createWorkflowMenu(host, options) {
-  const doc = host.document, sites = { deepseek: 'DeepSeek', gpt: 'GPT', gemini: 'Gemini' };
+  const doc = host.document, sites = { deepseek: 'DeepSeek', doubao: '豆包', gpt: 'GPT', gemini: 'Gemini' };
   let menu = null, anchor = null, requestId = '', snapshot = null, timer = null;
   function close(focus = false) {
     if (timer) host.clearTimeout(timer); timer = null;

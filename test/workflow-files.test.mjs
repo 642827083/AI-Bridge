@@ -37,26 +37,29 @@ test('导入只预览不写入，重名自动调整，勾选内容一次原子�
   assert.equal(p.h.writes.length, writes + 1); assert.equal(p.h.writes.at(-1).atomic, true);
   assert.equal(p.scene.controller.workflowImport, null);
 });
-test('无效格式、版本、隐藏网站、内容、名称、数量和未完成文件均不改原文件', () => {
+test('无效格式、版本、不支持的网站、内容、名称、数量和未完成文件均不改原文件', () => {
   const p = setup(); p.save(workflow()); const before = p.h.files.get('/documents/AI-Bridge/workflows.json');
   const invalid = ['{}', '[1]', 'bad json', JSON.stringify({ format: 'ai-bridge-workflows', version: 2, workflows: [workflow()] }), archive([]), archive(Array.from({ length: 21 }, () => workflow())),
-    archive([workflow('有效'), workflow('损坏', { cardItems: null })]), archive([workflow('坏名称\n')]), archive([workflow('隐藏', { site: 'doubao' })]), archive([workflow('空', { cardItems: [], handwriting: 'none', extraText: '' })])];
+    archive([workflow('有效'), workflow('损坏', { cardItems: null })]), archive([workflow('坏名称\n')]), archive([workflow('未知网站', { site: 'unknown' })]), archive([workflow('空', { cardItems: [], handwriting: 'none', extraText: '' })])];
   for (const text of invalid) { assert.throws(() => p.prepare(text)); assert.deepEqual(p.h.files.get('/documents/AI-Bridge/workflows.json'), before); assert.equal(p.scene.controller.workflowImport, null); }
   p.command('prepareWorkflowImport', { phase: 'begin', id: 'incomplete', length: 20, expectedRevision: p.store.read().revision });
   assert.throws(() => p.command('prepareWorkflowImport', { phase: 'finish', id: 'incomplete' }), /不完整/);
   assert.throws(() => p.command('prepareWorkflowImport', { phase: 'begin', id: 'large', length: 1024 * 1024 + 1, expectedRevision: p.store.read().revision }), /1 MB/);
 });
-test('容量和选择校验包括隐藏存档，失败可减少选择重试，隐藏项从不导出', () => {
-  const p = setup(); for (let n = 0; n < 18; n++) p.save(workflow('原有' + n)); p.save(workflow('隐藏', { site: 'doubao' }));
+test('容量和选择校验包括豆包工作流，失败可减少选择重试，豆包可正常导入导出', () => {
+  const p = setup(); for (let n = 0; n < 18; n++) p.save(workflow('原有' + n)); p.save(workflow('豆包工作流', { site: 'doubao' }));
   const preview = p.prepare(archive([workflow('新一'), workflow('新二')])); assert.equal(preview.remaining, 1);
   const revision = p.store.read().revision;
   for (const indices of [[], [0, 0], [-1], [2], ['0'], [0, 1]]) assert.throws(() => p.command('commitWorkflowImport', { id: preview.id, indices }));
   assert.equal(p.store.read().revision, revision); assert.ok(p.scene.controller.workflowImport);
   const visible = p.command('commitWorkflowImport', { id: preview.id, indices: [1] });
-  assert.equal(p.store.read().items.length, 20); assert.equal(visible.items.length, 19); assert.equal(visible.items.at(-1).name, '新二');
-  const record = p.store.read(); assert.throws(() => p.command('exportWorkflows', { expectedRevision: record.revision, ids: [record.items.find(item => item.site === 'doubao').id] }), /失效/);
+  assert.equal(p.store.read().items.length, 20); assert.equal(visible.items.length, 20); assert.equal(visible.items.at(-1).name, '新二');
+  const record = p.store.read();
   p.command('exportWorkflows', { expectedRevision: record.revision, ids: visible.items.map(item => item.id) });
-  const data = p.h.files.get(p.h.savedFiles[0].path).toString(); assert.equal(data.includes('doubao'), false); assert.equal(data.includes('隐藏'), false);
+  const data = p.h.files.get(p.h.savedFiles[0].path).toString(); assert.equal(data.includes('doubao'), true);
+  const imported = setup(), importedPreview = imported.prepare(data);
+  const result = imported.command('commitWorkflowImport', { id: importedPreview.id, indices: [18] });
+  assert.deepEqual(result.items.map(({ id, ...item }) => item), [workflow('豆包工作流', { site: 'doubao' })]);
 });
 test('原子保存失败保留原文件和预览，重试只写入一次；并发变更拒绝旧预览', () => {
   const p = setup(); p.save(workflow()); let preview = p.prepare(archive([workflow('追加')]));

@@ -22,22 +22,24 @@ var AIBSettings = (function () {
   function write(input) {
     var settings = validate(input); AIBNative.save('settings', JSON.stringify(settings)); return settings;
   }
-  var SITES = ['deepseek', 'gpt', 'gemini'];
+  var SITES = ['deepseek', 'doubao', 'gpt', 'gemini'];
   function siteAvailable(name) { return SITES.indexOf(name) >= 0; }
   function readNavigation() {
     try {
       var record = JSON.parse(String(AIBNative.preference('navigationSites', '{}')));
-      if (record && record.schema === 3 && Array.isArray(record.sites) && record.sites.length && record.sites.every(siteAvailable)) {
+      if (record && [3, 4].indexOf(record.schema) >= 0 && Array.isArray(record.sites) && record.sites.length && record.sites.every(siteAvailable)) {
+        // 旧版默认仅显示 DeepSeek；新保存的单网页选择仍按用户设置保留。
+        if (record.schema === 3 && record.sites.length === 1 && record.sites[0] === 'deepseek') return { sites: ['deepseek', 'doubao'] };
         return { sites: SITES.filter(function (site) { return record.sites.indexOf(site) >= 0; }) };
       }
     } catch (error) {}
-    return { sites: ['deepseek'] };
+    return { sites: ['deepseek', 'doubao'] };
   }
   function writeNavigation(input) {
     if (input && Array.isArray(input.sites) && input.sites.length === 0) throw new Error('至少保留一个网页');
-    if (!input || !Array.isArray(input.sites) || input.sites.length > 3 || !input.sites.every(siteAvailable)) throw new Error('导航栏设置无效');
+    if (!input || !Array.isArray(input.sites) || input.sites.length > 4 || !input.sites.every(siteAvailable)) throw new Error('导航栏设置无效');
     var sites = SITES.filter(function (site) { return input.sites.indexOf(site) >= 0; });
-    AIBNative.save('navigationSites', JSON.stringify({ schema: 3, sites: sites })); return { sites: sites };
+    AIBNative.save('navigationSites', JSON.stringify({ schema: 4, sites: sites })); return { sites: sites };
   }
   return { normalize: normalize, validate: validate, read: read, write: write, readNavigation: readNavigation, writeNavigation: writeNavigation, siteAvailable: siteAvailable };
 })();

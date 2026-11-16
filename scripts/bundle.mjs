@@ -12,5 +12,5 @@ export async function resources() {
   ]);
   const settingsHTML = read('web/src/settings.html').replace('/* AIB_STYLE */', () => read('web/src/settings.css')).replace('/* AIB_APP */', () => safe(read('src/AIBPetPackModel.js') + '\n' + settings));
   const mediaHTML = '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ai Bridge 内容读取</title></head><body><p id="status" role="status" style="font:14px -apple-system,sans-serif;padding:12px;color:#5c6270">正在读取所选卡片…</p><script>' + safe(media) + '</script></body></html>';
-  return { deepseek, doubao, gpt, gemini, settingsHTML, mediaHTML, petMotionHTML: read('web/src/pet-motion/index.html'), petMotionPlayer: read('web/src/pet-motion/player.js') };
+  return { deepseek, doubao, gpt, gemini, refreshProbe: read('web/src/refresh-probe.js'), settingsHTML, mediaHTML, petMotionHTML: read('web/src/pet-motion/index.html'), petMotionPlayer: read('web/src/pet-motion/player.js') };
 }

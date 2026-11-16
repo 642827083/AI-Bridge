@@ -1,7 +1,7 @@
 import { MNBridge } from './lib/mnBridge.js';
 import { WorkflowFiles } from './workflow-files.js';
 
-const sites = { deepseek: 'DeepSeek', gpt: 'GPT', gemini: 'Gemini' };
+const sites = { deepseek: 'DeepSeek', doubao: '豆包', gpt: 'GPT', gemini: 'Gemini' };
 const handwriting = { last: '卡片最后一条手写', mindmap: '脑图手写', none: '无手写' };
 export class Workflows {
   constructor() {

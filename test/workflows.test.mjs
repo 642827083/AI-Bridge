@@ -8,18 +8,18 @@ const workflow = (overrides = {}) => ({ name: '讲解题目', site: 'deepseek', 
 const path = '/documents/AI-Bridge/workflows.json';
 function save(h, item = workflow()) { const store = h.context.AIBWorkflows; return store.save({ expectedRevision: store.read().revision, workflow: item }); }
 
-test('排序即时保存，隐藏条目原位保留，桌宠与网页读取同一顺序，重启仍保留', () => {
+test('排序包括恢复显示的豆包，桌宠与网页读取同一顺序，重启仍保留', () => {
   const h = pets(), d = h.open(), store = h.context.AIBWorkflows;
-  for (const [name, site] of [['甲', 'deepseek'], ['隐藏', 'doubao'], ['乙', 'gpt'], ['丙', 'gemini']]) save(h, workflow({ name, site }));
+  for (const [name, site] of [['甲', 'deepseek'], ['豆包', 'doubao'], ['乙', 'gpt'], ['丙', 'gemini']]) save(h, workflow({ name, site }));
   const before = plain(store.read()), target = before.items[2];
   const sorted = store.move({ expectedRevision: before.revision, id: target.id, direction: -1 });
-  assert.deepEqual(Array.from(sorted.items, item => item.name), ['乙', '隐藏', '甲', '丙']);
-  assert.deepEqual(plain(sorted.items[1]), before.items[1]);
+  assert.deepEqual(Array.from(sorted.items, item => item.name), ['甲', '乙', '豆包', '丙']);
+  assert.deepEqual(plain(sorted.items[2]), before.items[1]);
   for (const item of sorted.items) assert.deepEqual(plain(item), before.items.find(old => old.id === item.id));
   const restored = pets({ files: h.files }).context.AIBWorkflows.visible();
-  assert.deepEqual(Array.from(restored.items, item => item.name), ['乙', '甲', '丙']);
+  assert.deepEqual(Array.from(restored.items, item => item.name), ['甲', '乙', '豆包', '丙']);
   h.call(d.addon, 'petWorkflowMenu');
-  assert.deepEqual(Array.from(d.s.workflowRowLabels, row => row.name.text), ['乙', '甲', '丙']);
+  assert.deepEqual(Array.from(d.s.workflowRowLabels, row => row.name.text), ['甲', '乙', '豆包', '丙']);
   let response;
   d.controller.settingsView.evaluateJavaScript = (code, callback) => { response = JSON.parse(code.match(/__AIB_BRIDGE_RECEIVE__\((.*)\)$/)[1]); callback(true); };
   const request = { command: 'getWorkflows', token: 'settings', requestId: 'read-order' };
@@ -204,7 +204,7 @@ function execution(item = workflow(), options = {}) {
   return { h, d, book, stored, calls, media, bundles, run: originSite => h.context.AIBWorkflowRunner.run(d.addon, stored.id, originSite) };
 }
 
-for (const site of ['deepseek', 'gpt', 'gemini']) test(site + ' 工作流打开对应网页，用专用范围上传并保留通用设置', async () => {
+for (const site of ['deepseek', 'doubao', 'gpt', 'gemini']) test(site + ' 工作流打开对应网页，用专用范围上传并保留通用设置', async () => {
   const e = execution(workflow({ site, cardItems: [2, 4], handwriting: 'mindmap', extraText: '检查我的手写' }), { readyAfter: 3 });
   const before = plain(e.h.context.AIBSettings.read()); await e.run();
   assert.equal(e.d.controller.activePage, site); assert.equal(e.d.controller.workflowRun, null); assert.equal(e.d.controller.uploadOperation, null);
@@ -267,8 +267,8 @@ test('网页 bridge 只能触发普通上传，不能读取、保存或执行原
   h.context.AIBWebCommands.local(d.controller, address('runWorkflow'), d.controller.settingsView); assert.match(replies.at(-1), /不支持的设置命令/);
 });
 
-for (const active of ['deepseek', 'gpt', 'gemini']) test(active + ' 网页执行只使用工作流范围和提示词，任何指定网站都不会使当前网页跳转', async () => {
-  for (const savedSite of ['deepseek', 'gpt', 'gemini']) {
+for (const active of ['deepseek', 'doubao', 'gpt', 'gemini']) test(active + ' 网页执行只使用工作流范围和提示词，任何指定网站都不会使当前网页跳转', async () => {
+  for (const savedSite of ['deepseek', 'doubao', 'gpt', 'gemini']) {
     const e = execution(workflow({ site: savedSite, cardItems: [2, 4], handwriting: 'mindmap', extraText: '当前页提示词' }));
     e.d.controller.activePage = active; const before = plain(e.h.context.AIBWorkflows.read());
     await e.run(active);

@@ -168,11 +168,11 @@ test('无效空工作流被拒绝，纯提示词工作流可保存，管理入�
   assert.equal(p.doc.querySelector('#workflows-tab').getAttribute('aria-selected'), 'true'); assert.equal(p.doc.querySelector('#workflows-panel').hidden, false);
 });
 
-test('工作流可选择 Gemini，保存后摘要和重开编辑均保留目标网站', async t => {
-  const p = await page(t); p.click('workflow-new'); p.doc.querySelector('#workflow-name').value = 'Gemini 讲解'; p.doc.querySelector('#workflow-site').value = 'gemini';
-  await p.submit(); assert.match(p.doc.querySelector('#workflow-list').textContent, /Gemini/);
-  p.doc.querySelector('.workflow-row [data-action="edit"]').click(); assert.equal(p.doc.querySelector('#workflow-site').value, 'gemini');
-  assert.equal(p.h.context.AIBWorkflows.read().items[0].site, 'gemini');
+for (const [site, label] of [['doubao', '豆包'], ['gemini', 'Gemini']]) test('工作流可选择 ' + label + '，保存后摘要和重开编辑均保留目标网站', async t => {
+  const p = await page(t); p.click('workflow-new'); p.doc.querySelector('#workflow-name').value = label + ' 讲解'; p.doc.querySelector('#workflow-site').value = site;
+  await p.submit(); assert.ok(p.doc.querySelector('#workflow-list').textContent.includes(label));
+  p.doc.querySelector('.workflow-row [data-action="edit"]').click(); assert.equal(p.doc.querySelector('#workflow-site').value, site);
+  assert.equal(p.h.context.AIBWorkflows.read().items[0].site, site);
 });
 
 test('上移下移即时保存顺序，首尾禁用，编辑草稿时不能排序，重开列表保留', async t => {

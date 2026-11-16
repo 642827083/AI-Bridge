@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { zipSync, unzipSync } from 'fflate';
 import { Resvg } from '@resvg/resvg-js';
 import { resources } from './bundle.mjs';
+import { optimizeToolbarPNG } from './toolbar-png.mjs';
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 const lock = JSON.parse(readFileSync('package-lock.json', 'utf8'));
 const manifest = JSON.parse(readFileSync('src/mnaddon.json', 'utf8'));
@@ -15,11 +16,18 @@ const resource = await resources();
 mkdirSync('src/web-dist', { recursive: true });
 const artwork = readFileSync('assets/icon.png').toString('base64');
 // 保留用户原图，只在构建时按图形边界居中缩放为工具栏图标。
-const iconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="120 160 948 948"><image width="1254" height="1254" href="data:image/png;base64,' + artwork + '"/></svg>';
+const iconSVG = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="120 160 948 948"><image width="1254" height="1254" href="data:image/png;base64,' + artwork + '"/></svg>';
 const icon = new Resvg(iconSVG).render().asPng();
 writeFileSync('src/icon.png', icon);
-writeFileSync('src/web-dist/Resources.js', 'var AIBResources = ' + JSON.stringify({ deepseek: resource.deepseek, doubao: resource.doubao, gpt: resource.gpt, gemini: resource.gemini, settingsHTML: resource.settingsHTML }) + ';\n');
+writeFileSync('src/web-dist/Resources.js', 'var AIBResources = ' + JSON.stringify({ deepseek: resource.deepseek, doubao: resource.doubao, gpt: resource.gpt, gemini: resource.gemini, refreshProbe: resource.refreshProbe, settingsHTML: resource.settingsHTML }) + ';\n');
 writeFileSync('src/web-dist/MediaReader.html', resource.mediaHTML);
+// 仅打包三个现成图标，运行时直接读图，不依赖图标库或原生绘图。
+mkdirSync('src/web-dist/toolbar', { recursive: true });
+for (const [name, source] of Object.entries({ refresh: 'rotate-cw', menu: 'menu', close: 'x' })) {
+  const svg = readFileSync('assets/toolbar/' + source + '.svg', 'utf8').replace('stroke="currentColor"', 'stroke="#555555"');
+  writeFileSync('src/web-dist/toolbar/' + name + '@3x.png', optimizeToolbarPNG(new Resvg(svg, { fitTo: { mode: 'width', value: 60 } }).render().asPng()));
+}
+for (const file of ['LICENSE', 'SOURCE.md']) writeFileSync('src/web-dist/toolbar/' + file, readFileSync('assets/toolbar/' + file));
 mkdirSync('src/web-dist/pet-motion', { recursive: true });
 writeFileSync('src/web-dist/pet-motion/index.html', resource.petMotionHTML);
 writeFileSync('src/web-dist/pet-motion/player.js', resource.petMotionPlayer);
@@ -35,7 +43,7 @@ function collect(directory, prefix = '') {
   }
 }
 collect('src');
-for (const name of ['main.js', 'mnaddon.json', 'icon.png', 'web-dist/Resources.js', manifest.panel, 'web-dist/pet-motion/index.html', 'web-dist/pet-motion/player.js', 'web-dist/pet-builtin/DSniang1.png', 'web-dist/pet-builtin/SOURCE.md', 'web-dist/pet-builtin/UPSTREAM-PROVENANCE.md']) if (!files[name]) throw new Error('安装包缺少：' + name);
+for (const name of ['main.js', 'mnaddon.json', 'icon.png', 'web-dist/Resources.js', manifest.panel, 'web-dist/toolbar/refresh@3x.png', 'web-dist/toolbar/menu@3x.png', 'web-dist/toolbar/close@3x.png', 'web-dist/toolbar/LICENSE', 'web-dist/pet-motion/index.html', 'web-dist/pet-motion/player.js', 'web-dist/pet-builtin/DSniang1.png', 'web-dist/pet-builtin/SOURCE.md', 'web-dist/pet-builtin/UPSTREAM-PROVENANCE.md']) if (!files[name]) throw new Error('安装包缺少：' + name);
 for (const match of readFileSync('src/main.js', 'utf8').matchAll(/JSB\.require\('([^']+)'\)/g)) if (!files[match[1] + '.js']) throw new Error('入口引用缺失：' + match[1]);
 const archive = zipSync(files, { level: 9 }); writeFileSync(output, archive);
 const unpacked = unzipSync(new Uint8Array(readFileSync(output)));

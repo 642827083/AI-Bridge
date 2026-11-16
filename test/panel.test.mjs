@@ -18,26 +18,29 @@ function panel(sites = ['deepseek', 'gpt', 'gemini'], nativeWindow = false) {
     setTitleForState(title) { this.title = title; }
     setTitleColorForState() {} addTargetActionForControlEvents() {} loadHTMLStringBaseURL() {}
     loadRequest(url) { (this.requests ||= []).push(url); }
+    stopLoading() {}
+    reload() { this.reloads = (this.reloads || 0) + 1; }
     evaluateJavaScript(code, callback) { callback('about:blank'); }
   }
   const color = new Proxy({}, { get: () => () => ({}) });
   const fonts = { systemFontOfSize: size => ({ size, bold: false }), boldSystemFontOfSize: size => ({ size, bold: true }) };
   const values = new Map(), study = { view: new View({ x: 0, y: 0, width: 1024, height: 768 }) };
-  const context = vm.createContext({ console, UIView: View, UILabel: View, UIButton: View, UIWebView: View, UIColor: color, UIFont: fonts,
+  const context = vm.createContext({ console, UIView: View, UILabel: View, UIButton: View, UIWebView: View, UIScrollView: View, UIImageView: View, UIImage: { imageWithContentsOfFile: path => ({ path }) }, UIColor: color, UIFont: fonts,
     CABasicAnimation: { animationWithKeyPath: keyPath => ({ keyPath }) }, CAMediaTimingFunction: { functionWithControlPoints: (...points) => points },
     CATransaction: { begin() {}, commit() {}, setAnimationDuration() {} },
     UIPanGestureRecognizer: class { constructor(target, action) { this.target = target; this.action = action; } },
     NSURL: { URLWithString: url => url }, NSURLRequest: { requestWithURL: url => url },
-    AIBNative: { preference: (key, fallback) => key === 'navigationSites' && sites !== null ? JSON.stringify({ schema: 3, sites }) : fallback, save: () => {}, token: () => 'test', evaluate: async () => 'about:blank', address: request => request.url, value: (object, key) => object?.[key] }, AIBResources: { settingsHTML: '', deepseek: 'deepseek-script', doubao: 'doubao-script', gpt: 'gpt-script', gemini: 'gemini-script' },
+    AIBNative: { preference: (key, fallback) => key === 'navigationSites' && sites !== null ? JSON.stringify({ schema: 4, sites }) : fallback, save: () => {}, token: () => 'test', evaluate: async () => 'about:blank', address: request => request.url, value: (object, key) => object?.[key] }, AIBResources: { settingsHTML: '', deepseek: 'deepseek-script', doubao: 'doubao-script', gpt: 'gpt-script', gemini: 'gemini-script' },
     AIBUpload: { cancel(controller) { controller.uploadOperation = null; }, async call() {} }, AIBWindow: { layout() {} }, AIBPets: { cancel() {}, front() {} },
     AIBWorkflowRunner: { cancel(controller) { controller.workflowRun = null; } }, AIBWorkflowPet: { reveal() {} }, AIBWorkflowFiles: { cancel(controller) { controller.workflowImport = null; } },
+    AIBSettingsPage: { layout() {}, enter() {}, cancel() {}, finished() {}, failed() {} },
     NSUserDefaults: { standardUserDefaults: () => ({ objectForKey: key => values.get(key), setObjectForKey: (value, key) => values.set(key, value) }) },
     JSB: { defineClass: (name, definition) => { methods = definition; return { new: () => ({ view: new View() }) }; } }
   });
   context.AIBNative.study = () => study;
   if (nativeWindow) vm.runInContext(readFileSync('src/AIBWindow.js', 'utf8'), context);
-  for (const file of ['AIBSettings', 'AIBSites', 'AIBNavigationMotion', 'AIBPanel']) vm.runInContext(readFileSync('src/' + file + '.js', 'utf8'), context);
-  const controller = context.AIBPanel.create({ window: {} }); context.self = controller; methods.viewDidLoad();
+  for (const file of ['AIBSettings', 'AIBSites', 'AIBNavigationMotion', 'AIBPanelActions', 'AIBToolbarIcons', 'AIBPanel']) vm.runInContext(readFileSync('src/' + file + '.js', 'utf8'), context);
+  const controller = context.AIBPanel.create({ window: {}, petMainPath: '/addon' }); context.self = controller; methods.viewDidLoad();
   return { controller, context, methods, values, study };
 }
 
@@ -76,7 +79,13 @@ test('顶栏整条绑定拖动，按钮仍保留各自点击入口', () => {
   for (const tab of [controller.deepseekButton, controller.doubaoButton, controller.gptButton, controller.settingsButton]) {
     assert.deepEqual(tab.titleLabel.font, { size: 14, bold: true });
   }
-  assert.deepEqual(controller.closeButton.titleLabel.font, { size: 24, bold: false });
+  for (const control of [controller.refreshButton, controller.workflowButton, controller.closeButton]) {
+    assert.equal(control.title, ''); assert.deepEqual({ ...control.children[0].frame }, { x: 12, y: 12, width: 20, height: 20 });
+    assert.equal(control.children[0].userInteractionEnabled, false);
+  }
+  assert.equal(controller.refreshButton.children[0].image.path, '/addon/web-dist/toolbar/refresh@3x.png');
+  assert.equal(controller.workflowButton.children[0].image.path, '/addon/web-dist/toolbar/menu@3x.png');
+  assert.equal(controller.closeButton.children[0].image.path, '/addon/web-dist/toolbar/close@3x.png');
 });
 
 test('Gemini 在 GPT 右侧、设置左侧，首次打开才加载，切换后保留网页和草稿', () => {
@@ -128,7 +137,7 @@ test('网页脚本及连接 token 分别注入各自网站，登录域名不注�
     if (code === 'location.origin') return context.AIBSites.forView(controller, view).origin;
     scripts.push([view, code]);
   };
-  context.AIBUpload.call = async (c, method, args, site) => connected.push(site.name);
+  context.AIBUpload.call = async (c, method, args, site) => { assert.equal(args[1].inlineButton, false); connected.push(site.name); };
   for (const site of context.AIBSites.all(controller)) await context.AIBPanel.inject(controller, site);
   assert.deepEqual(scripts, [[controller.webView, 'deepseek-script'], [controller.doubaoView, 'doubao-script'], [controller.gptView, 'gpt-script'], [controller.geminiView, 'gemini-script']]);
   assert.deepEqual(connected, ['deepseek', 'doubao', 'gpt', 'gemini']);
@@ -137,7 +146,7 @@ test('网页脚本及连接 token 分别注入各自网站，登录域名不注�
 });
 test('网页延伸至窗口底部，只有右下角缩放手柄覆盖其上', () => {
   const { controller, context } = panel();
-  assert.equal(controller.footer, undefined); assert.equal(controller.uploadButton, undefined); assert.equal(controller.refreshButton, undefined); assert.equal(controller.statusLabel, undefined);
+  assert.equal(controller.footer, undefined); assert.equal(controller.uploadButton, undefined); assert.equal(controller.refreshButton.superview, controller.header); assert.equal(controller.statusLabel, undefined);
   assert.equal(controller.webView.frame.height, 556); assert.equal(controller.resizeHandle.superview, controller.view);
   assert.deepEqual({ ...controller.resizeHandle.frame }, { x: 670, y: 570, width: 30, height: 30 });
   context.AIBPanel.page(controller, 'settings'); assert.equal(controller.webView.hidden, true); assert.equal(controller.settingsView.hidden, false);
@@ -152,13 +161,17 @@ test('GPT 页面跳转上传命令交给原生处理并阻止实际离开聊天�
   assert.equal(allowed, false); assert.deepEqual(calls, [[controller, address, controller.gptView]]); assert.equal(site.epoch, epoch);
 });
 
-test('默认仅显示 DeepSeek 和设置，豆包保留代码但不能打开', () => {
+test('默认显示 DeepSeek、豆包和设置，豆包首次打开加载且切换保留草稿', () => {
   const { controller, context, methods } = panel(null);
-  assert.deepEqual(Array.from(controller.navigationSites), ['deepseek']);
-  for (const name of ['doubao', 'gpt', 'gemini']) assert.equal(controller[name + 'Button'].hidden, true);
+  assert.deepEqual(Array.from(controller.navigationSites), ['deepseek', 'doubao']);
+  assert.equal(controller.doubaoButton.hidden, false);
+  for (const name of ['gpt', 'gemini']) assert.equal(controller[name + 'Button'].hidden, true);
   assert.equal(controller.settingsButton.hidden, false);
-  methods.openDoubao(); context.AIBPanel.page(controller, 'doubao', true);
-  assert.equal(controller.activePage, 'deepseek'); assert.equal(controller.doubaoView.requests, undefined);
+  assert.equal(controller.doubaoView.requests, undefined);
+  methods.openDoubao(); assert.equal(controller.activePage, 'doubao'); assert.equal(controller.doubaoView.requests.length, 1);
+  controller.doubaoView.draft = '保留豆包草稿'; methods.openDeepSeek(); methods.openDoubao();
+  assert.equal(controller.doubaoView.requests.length, 1); assert.equal(controller.doubaoView.draft, '保留豆包草稿');
+  assert.equal(controller.doubaoView.requests[0], 'https://www.doubao.com/chat/');
   assert.ok(context.AIBResources.doubao); assert.ok(controller.doubaoView);
 });
 
@@ -174,9 +187,9 @@ test('豆包上传命令由原生拦截，后台豆包跳转不会取消 GPT 上
   assert.ok(controller.uploadOperation); assert.equal(site.token, ''); assert.equal(site.epoch, 1);
 });
 
-test('七种导航组合均保留设置和原有按钮宽度，启动时不加载隐藏网站', () => {
-  const all = ['deepseek', 'gpt', 'gemini'];
-  for (let mask = 1; mask < 8; mask++) {
+test('十五种导航组合均保留设置和原有按钮宽度，启动时不加载隐藏网站', () => {
+  const all = ['deepseek', 'doubao', 'gpt', 'gemini'];
+  for (let mask = 1; mask < 16; mask++) {
     const sites = all.filter((_, index) => mask & (1 << index));
     const { controller, context } = panel(sites);
     assert.equal(controller.activePage, sites[0] || 'settings');
@@ -215,4 +228,67 @@ test('导航横线快速切换从呈现位置继续，重复布局不打断，�
   delete context.CABasicAnimation; methods.openSettings();
   assert.equal(controller.activePage, 'settings'); assert.equal(controller.settingsView.hidden, false);
   assert.equal(indicator.frame.x + 12, controller.settingsButton.frame.x + controller.settingsButton.frame.width / 2);
+});
+
+test('顶栏刷新、工作流、关闭依次排列，所有导航组合不重叠，设置页隐藏前两项', () => {
+  const { controller: c, context, methods } = panel(['deepseek', 'doubao', 'gpt', 'gemini']);
+  for (const width of [304, 340, 700, 1200]) {
+    c.view.frame.width = width; context.AIBPanel.layout(c);
+    assert.ok(c.settingsButton.frame.x + c.settingsButton.frame.width <= c.refreshButton.frame.x);
+    assert.equal(c.refreshButton.frame.x + 44, c.workflowButton.frame.x);
+    assert.equal(c.workflowButton.frame.x + 44, c.closeButton.frame.x);
+    assert.equal(c.workflowButton.superview === c.header, true);
+  }
+  methods.openSettings(); assert.equal(c.refreshButton.hidden, true); assert.equal(c.workflowButton.hidden, true);
+  methods.openGemini(); assert.equal(c.refreshButton.hidden, false); assert.equal(c.workflowButton.hidden, false);
+});
+
+test('顶栏菜单向下展示、长列表可滚动，跨站工作流在当前网页执行且拒绝旧按钮', () => {
+  const { controller: c, context, methods } = panel(); c.visible = true;
+  context.AIBWorkflows = { visible: () => ({ items: Array.from({ length: 20 }, (_, index) => ({ id: 'wf-' + index, name: '工作流' + index, site: 'deepseek' })) }) };
+  const runs = []; context.AIBWorkflowRunner.run = (...args) => runs.push(args);
+  methods.openGemini(); methods.togglePanelWorkflows(); const s = c.panelActions, row = s.rows[4];
+  assert.equal(s.overlay.superview === c.view, true); assert.equal(s.overlay.frame.y, 44); assert.ok(s.menu.frame.y >= 0);
+  assert.equal(s.rows.length, 20); assert.ok(s.scroll.contentSize.height > s.scroll.frame.height);
+  methods.runPanelWorkflow({ tag: 4 }); assert.equal(runs.length, 0);
+  methods.runPanelWorkflow(row); assert.equal(c.panelActions, null); assert.equal(runs.length, 1);
+  assert.equal(runs[0][1], 'wf-4'); assert.equal(runs[0][2], 'gemini'); assert.equal(c.activePage, 'gemini');
+  methods.togglePanelWorkflows(); methods.openGPT(); methods.runPanelWorkflow(row); assert.equal(c.panelActions, null); assert.equal(runs.length, 1);
+});
+
+test('顶栏菜单空状态、工作流库和再次点击收起；关闭、换页、网页导航会清理菜单', () => {
+  const { controller: c, context, methods } = panel(); c.visible = true;
+  context.AIBWorkflows = { visible: () => ({ items: [] }) }; let managed = 0;
+  context.AIBWorkflowPet.manage = () => managed++;
+  methods.togglePanelWorkflows(); assert.equal(c.panelActions.empty.text, '还没有工作流'); methods.managePanelWorkflows(); assert.equal(managed, 1); assert.equal(c.panelActions, null);
+  methods.togglePanelWorkflows(); methods.togglePanelWorkflows(); assert.equal(c.panelActions, null);
+  methods.togglePanelWorkflows(); methods.dismissPanelActions(); assert.equal(c.panelActions, null);
+  methods.togglePanelWorkflows(); const url = 'https://chat.deepseek.com/a/new';
+  methods.webViewShouldStartLoadWithRequestNavigationType(c.webView, { url, mainDocumentURL: { absoluteString: url } }); assert.equal(c.panelActions, null);
+  context.AIBWindow.save = () => {}; methods.togglePanelWorkflows(); methods.closePanel(); assert.equal(c.panelActions, null);
+});
+
+test('刷新只重载当前页、失效旧上传连接；有草稿确认后再刷新，取消保留草稿', async () => {
+  const { controller: c, context, methods } = panel(); c.visible = true; methods.openGemini();
+  context.AIBNative.evaluate = async () => JSON.stringify({ pending: false });
+  const site = context.AIBSites.get(c); site.token = 'old'; const epoch = site.epoch;
+  await context.AIBPanelActions.refresh(c); assert.equal(c.geminiView.reloads, 1); assert.equal(c.webView.reloads, undefined);
+  assert.equal(site.token, ''); assert.equal(site.epoch, epoch + 1); assert.equal(c.panelActions, null);
+  context.AIBNative.evaluate = async () => JSON.stringify({ pending: true });
+  await context.AIBPanelActions.refresh(c); assert.equal(c.panelActions.kind, 'refresh'); assert.equal(c.geminiView.reloads, 1);
+  assert.match(c.panelActions.message.text, /未发送/); methods.dismissPanelActions(); assert.equal(c.geminiView.reloads, 1);
+  await context.AIBPanelActions.refresh(c); methods.confirmPanelRefresh(); assert.equal(c.geminiView.reloads, 2); assert.equal(c.panelActions, null);
+});
+
+test('刷新检查失败时提醒；切换网站、关面板、导航或新上传后旧检查不能刷新', async () => {
+  const { controller: c, context, methods } = panel(); c.visible = true; const messages = [];
+  context.AIBNative.hud = (_, text) => messages.push(text);
+  context.AIBNative.evaluate = async () => { throw Error('timeout'); };
+  await context.AIBPanelActions.refresh(c); assert.match(c.panelActions.message.text, /无法确认/); methods.dismissPanelActions();
+  let resolve; context.AIBNative.evaluate = () => new Promise(done => { resolve = done; });
+  const pending = context.AIBPanelActions.refresh(c); methods.openGPT(); resolve(JSON.stringify({ pending: false })); await pending;
+  assert.equal(c.webView.reloads, undefined); assert.equal(c.gptView.reloads, undefined); assert.equal(c.panelActions, null);
+  context.AIBNative.evaluate = async () => JSON.stringify({ pending: true }); await context.AIBPanelActions.refresh(c);
+  c.uploadOperation = {}; methods.confirmPanelRefresh(); assert.equal(c.gptView.reloads, undefined); assert.match(messages.at(-1), /处理中/);
+  await context.AIBPanelActions.refresh(c); assert.match(messages.at(-1), /处理中/);
 });

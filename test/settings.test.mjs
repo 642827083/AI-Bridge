@@ -20,7 +20,7 @@ async function page(t, settings = defaults, handler, configure) {
     window.mn = { call: async (command, payload) => {
       if (command === 'getSettings') return structuredClone(settings);
       if (command === 'getWorkflows') return { schema: 1, revision: '', items: [] };
-      if (command === 'getNavigation') return { sites: ['deepseek'] };
+      if (command === 'getNavigation') return { sites: ['deepseek', 'doubao'] };
       if (command === 'getPetState') return { settings: { source: 'pack', visible: true, size: 112, opacity: 1 }, available: false, pack: null, image: { hasImage: false }, warning: '' };
       calls.push(structuredClone(payload)); return handler ? handler(payload) : payload;
     } };
@@ -96,22 +96,23 @@ test('设置胶囊为桌宠、工作流、关于插件，工作流独立管理�
   assert.equal(doc.querySelector('#settings,#upload-tab,#extraText'), null);
   assert.equal(doc.querySelector('#workflow-editor').closest('[role="tabpanel"]').id, 'workflows-panel');
   assert.equal(doc.querySelector('#pet-panel #workflow-list'), null);
-  assert.deepEqual(Array.from(doc.querySelector('#workflow-site').options, el => el.value), ['deepseek', 'gpt', 'gemini']);
+  assert.deepEqual(Array.from(doc.querySelector('#workflow-site').options, el => el.value), ['deepseek', 'doubao', 'gpt', 'gemini']);
   doc.querySelector('#workflows-tab').click(); doc.querySelector('#workflow-new').click();
   doc.querySelector('#workflow-prompt').value = '未保存的工作流草稿';
   doc.querySelector('#pet-tab').click(); doc.querySelector('#workflows-tab').click();
   assert.equal(doc.querySelector('#workflow-prompt').value, '未保存的工作流草稿');
   assert.equal(doc.querySelector('.settings-navigation-slider').style.transform, 'translate3d(100%,0,0)');
-  assert.equal(doc.body.textContent.includes('豆包'), false);
+  assert.equal(doc.body.textContent.includes('豆包'), true);
 });
 
-test('默认仅勾选 DeepSeek 和设置，网页至少保留一个，GPT 和 Gemini 可自行开启', async t => {
+test('默认勾选 DeepSeek、豆包和设置，网页至少保留一个，GPT 和 Gemini 可自行开启', async t => {
   const { doc, calls } = await page(t);
   const box = name => doc.querySelector('#navigation-fields input[value="' + name + '"]');
-  assert.equal(box('deepseek').checked, true); assert.equal(box('deepseek').disabled, true);
-  assert.equal(box('gpt').checked, false); assert.equal(box('gemini').checked, false); assert.equal(box('doubao'), null);
+  assert.equal(box('deepseek').checked, true); assert.equal(box('deepseek').disabled, false); assert.equal(box('doubao').checked, true);
+  assert.equal(box('gpt').checked, false); assert.equal(box('gemini').checked, false);
   box('gpt').click(); await flush(); box('deepseek').click(); await flush();
-  assert.deepEqual(calls.map(value => value.sites), [['deepseek', 'gpt'], ['gpt']]);
+  box('doubao').click(); await flush();
+  assert.deepEqual(calls.map(value => value.sites), [['deepseek', 'doubao', 'gpt'], ['doubao', 'gpt'], ['gpt']]);
   assert.equal(box('gpt').disabled, true);
   const fixed = doc.querySelector('.navigation-required input'); assert.equal(fixed.checked, true); assert.equal(fixed.disabled, true);
 });
@@ -123,11 +124,19 @@ test('导航保存失败恢复原选择，旧偏好使用新默认值，新偏�
   assert.match(doc.querySelector('#navigation-status').textContent, /写入失败/);
   const { settings, values } = native(); settings.write(defaults);
   for (const value of [undefined, 'broken', '[]', JSON.stringify(['gpt']), JSON.stringify({ schema: 2, sites: ['doubao', 'gpt', 'gemini'] })]) {
-    values.set('navigationSites', value); assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek']);
+    values.set('navigationSites', value); assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek', 'doubao']);
   }
   settings.writeNavigation({ sites: ['gemini', 'gpt', 'gpt'] }); assert.deepEqual(Array.from(settings.readNavigation().sites), ['gpt', 'gemini']);
   assert.equal(settings.read().extraText, defaults.extraText);
   assert.throws(() => settings.writeNavigation({ sites: [] }), /至少保留一个/);
-  assert.throws(() => settings.writeNavigation({ sites: ['doubao'] }), /无效/);
+  assert.throws(() => settings.writeNavigation({ sites: ['unknown'] }), /无效/);
   assert.deepEqual(Array.from(settings.readNavigation().sites), ['gpt', 'gemini']);
+  values.set('navigationSites', JSON.stringify({ schema: 3, sites: ['deepseek'] }));
+  assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek', 'doubao']);
+  values.set('navigationSites', JSON.stringify({ schema: 3, sites: ['deepseek', 'gpt', 'gemini'] }));
+  assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek', 'gpt', 'gemini']);
+  settings.writeNavigation({ sites: ['deepseek'] }); assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek']);
+  settings.writeNavigation({ sites: ['doubao'] }); assert.deepEqual(Array.from(settings.readNavigation().sites), ['doubao']);
+  settings.writeNavigation({ sites: ['gemini', 'gpt', 'doubao', 'deepseek'] });
+  assert.deepEqual(Array.from(settings.readNavigation().sites), ['deepseek', 'doubao', 'gpt', 'gemini']);
 });

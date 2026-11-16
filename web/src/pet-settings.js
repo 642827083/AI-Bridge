@@ -82,10 +82,15 @@ export class PetSettings {
     const source = result.settings.source, meta = source === 'builtin' ? result.builtin : source === 'pack' ? result.pack : result.image;
     if (this.deleting && (this.deleting.source !== source || this.deleting.expectedRevision !== meta?.revision)) this.deleting = null;
     $('pet-current').textContent = result.available ? source === 'pack' ? meta.manifest.name : meta.name : '选择你的桌宠';
-    $('pet-detail').textContent = result.available ? source === 'builtin' ? '自带桌宠 · 右上角菜单展开工作流' : source === 'pack' ? `${meta.manifest.author} · ${meta.manifest.actions.length} 组动作 · 播放待机动画` : '图片桌宠 · 静态显示' : '导入动作包或图片，显示在 MN 学习界面。';
+    $('pet-detail').textContent = result.available ? source === 'builtin' ? '自带桌宠' : source === 'pack' ? `${meta.manifest.author} · ${meta.manifest.actions.length} 组动作 · 播放待机动画` : '图片桌宠 · 静态显示' : '导入动作包或图片，显示在 MN 学习界面。';
     $('pet-sources').hidden = !result.builtin && !result.pack && !result.image?.hasImage;
+    $('pet-use-builtin').textContent = result.builtin?.name || '哦鲸鲸';
     $('pet-use-pack').textContent = result.pack?.manifest.name || '动作桌宠'; $('pet-use-image').textContent = result.image?.hasImage ? result.image.name : '图片桌宠';
-    for (const type of ['builtin', 'pack', 'image']) $('pet-use-' + type).setAttribute('aria-pressed', String(type === source && result.available));
+    for (const type of ['builtin', 'pack', 'image']) {
+      const button = $('pet-use-' + type);
+      button.hidden = type === 'builtin' ? !result.builtin : type === 'pack' ? !result.pack : !result.image?.hasImage;
+      button.setAttribute('aria-pressed', String(type === source && result.available)); button.title = button.textContent;
+    }
     this.controls(); this.preview(source, result.available ? meta.revision : '');
     if (result.warning) this.status(result.warning, true);
   }

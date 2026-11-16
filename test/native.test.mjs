@@ -174,5 +174,7 @@ test('豆包的上传 token 与其他网页隔离，后台网页与伪造 token 
   assert.equal(context.AIBWebCommands.remote(controller, address, controller.doubaoView), false);
   controller.activePage = 'doubao'; assert.equal(context.AIBWebCommands.remote(controller, address, controller.gptView), false);
   assert.equal(context.AIBWebCommands.remote(controller, 'aibridge://upload?token=gpt-token', controller.doubaoView), false);
-  assert.equal(context.AIBWebCommands.remote(controller, address, controller.doubaoView), false); assert.equal(uploads, 0);
+  assert.equal(context.AIBWebCommands.remote(controller, address, controller.doubaoView), true); assert.equal(uploads, 1);
+  controller.visible = false;
+  assert.equal(context.AIBWebCommands.remote(controller, address, controller.doubaoView), false); assert.equal(uploads, 1);
 });

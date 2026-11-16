@@ -24,14 +24,14 @@ function web(t) {
   const open = () => { click(host.document.querySelector('#aib-upload-button')); return new URL(navigations.at(-1)).searchParams.get('request'); };
   return { host, bridge, navigations, click, open, navigate() { href = 'https://chatgpt.com/c/other'; } };
 }
-const items = [{ id: 'wf-a', name: '<b>讲解</b>', site: 'gpt' }, { id: 'wf-b', name: '检查手写', site: 'gemini' }, { id: 'wf-hidden', name: '旧工作流', site: 'doubao' }];
+const items = [{ id: 'wf-a', name: '<b>讲解</b>', site: 'gpt' }, { id: 'wf-b', name: '检查手写', site: 'gemini' }, { id: 'wf-doubao', name: '豆包工作流', site: 'doubao' }, { id: 'wf-invalid', name: '不支持的工作流', site: 'unknown' }];
 
 test('三横线展开工作流，列表安全展示名称，选择后只发出对应工作流命令且不直接上传', t => {
   const w = web(t), doc = w.host.document, request = w.open();
   assert.equal(w.navigations.length, 1); assert.match(w.navigations[0], /^aibridge:\/\/workflows\?/);
   assert.equal(w.bridge.workflowMenu(request, { items }), true);
   const menu = doc.querySelector('#aib-workflow-menu');
-  assert.equal(menu.querySelectorAll('button').length, 3); assert.equal(menu.querySelector('b'), null); assert.doesNotMatch(menu.textContent, /旧工作流|豆包/);
+  assert.equal(menu.querySelectorAll('button').length, 4); assert.equal(menu.querySelector('b'), null); assert.match(menu.textContent, /豆包工作流/); assert.doesNotMatch(menu.textContent, /不支持的工作流/);
   assert.equal(doc.querySelector('textarea').value, '原草稿'); assert.equal(doc.querySelector('iframe'), null);
   assert.equal(menu.style.top, '282px');
   w.click(menu.querySelector('button'), false); assert.equal(w.navigations.length, 1);
@@ -75,11 +75,11 @@ function native() {
   return { h, d, c, replies, runs, managed, remote: address => h.context.AIBWebCommands.remote(c, address, c.gptView) };
 }
 
-test('原生菜单仅返回名称和目标网页，隐藏豆包但保留存档，执行和管理使用独立命令', () => {
+test('原生菜单包含豆包工作流且仅返回名称和目标网页，执行和管理使用独立命令', () => {
   const n = native(), bytes = Buffer.from(n.h.files.get('/documents/AI-Bridge/workflows.json'));
   assert.equal(n.remote('aibridge://workflows?token=current&request=menu-one'), true);
   const values = []; vm.runInNewContext(n.replies[0].code, { window: { __AIB_GPT__: { workflowMenu: (...args) => values.push(args) } } });
-  assert.equal(values[0][0], 'menu-one'); assert.equal(values[0][1].items.length, 2);
+  assert.equal(values[0][0], 'menu-one'); assert.equal(values[0][1].items.length, 3);
   assert.ok(values[0][1].items.every(item => item.site === 'gpt'), '菜单标注实际接收内容的当前网页');
   for (const item of values[0][1].items) assert.deepEqual(Object.keys(item).sort(), ['id', 'name', 'site']);
   assert.equal(n.remote('aibridge://workflow?token=current&id=' + values[0][1].items[1].id), true);
@@ -97,10 +97,11 @@ test('后台、错视图、过期 token 和无效命令不能读取菜单或执�
   assert.equal(n.replies.length, 0); assert.equal(n.runs.length, 0); assert.equal(n.managed.length, 0);
 });
 
-test('隐藏豆包的工作流不能由执行器打开，桌宠菜单同样不展示且不修改原存档', async () => {
+test('旧豆包工作流恢复到工作流库和桌宠菜单，不修改原存档', () => {
   const h = pets(), d = h.open(), store = h.context.AIBWorkflows;
-  const record = store.save({ expectedRevision: '', workflow: { name: '隐藏工作流', site: 'doubao', cardItems: [], handwriting: 'none', extraText: '提示词' } });
-  const before = plain(store.read()); h.call(d.addon, 'petWorkflowMenu'); assert.equal(d.s.workflowMenuItems.length, 0);
-  await h.context.AIBWorkflowRunner.run(d.addon, record.items[0].id);
-  assert.equal(d.controller.activePage, 'settings'); assert.match(h.hud.at(-1), /暂不可用/); assert.deepEqual(plain(store.read()), before);
+  const record = store.save({ expectedRevision: '', workflow: { name: '豆包工作流', site: 'doubao', cardItems: [], handwriting: 'none', extraText: '提示词' } });
+  const before = Buffer.from(h.files.get('/documents/AI-Bridge/workflows.json'));
+  assert.deepEqual(plain(store.visible().items), plain(record.items)); h.call(d.addon, 'petWorkflowMenu');
+  assert.deepEqual(Array.from(d.s.workflowMenuItems), [record.items[0].id]); assert.equal(d.s.workflowRowLabels[0].site.text, '豆包');
+  assert.deepEqual(h.files.get('/documents/AI-Bridge/workflows.json'), before);
 });

@@ -6,6 +6,7 @@ export function createComposerBridge(host, adapter) {
   let mountedEditor = null, mountedAnchor = null;
   let dock = null;
   let workflows = null;
+  let inlineButton = true;
   const uid = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2);
   function origin() { return host.location.origin === adapter.origin; }
   function shown(element) {
@@ -192,7 +193,7 @@ export function createComposerBridge(host, adapter) {
     workflows?.position();
   }
   function installButton() {
-    if (!origin()) return;
+    if (!inlineButton || !origin()) return;
     let element;
     try { element = editor(); } catch (error) { workflows?.close(); if (button) button.remove(); mountedEditor = null; mountedAnchor = null; return; }
     workflows?.position();
@@ -234,13 +235,14 @@ export function createComposerBridge(host, adapter) {
     if (button) button.remove(); button = null;
     mountedEditor = null; mountedAnchor = null; dock = null;
   }
-  function connect(token) {
+  function connect(token, options = {}) {
     disconnect(); if (!origin() || typeof token !== 'string') return false; nonce = token;
+    inlineButton = options.inlineButton !== false;
     workflows = createWorkflowMenu(host, { navigate, snapshot() { try { return { href: host.location.href, element: editor() }; } catch { return null; } }, current(snapshot) { try { return !!nonce && snapshot && snapshot.href === host.location.href && snapshot.element === editor(); } catch { return false; } } });
     host.addEventListener('pagehide', disconnect);
     host.addEventListener('resize', positionButton); host.addEventListener('scroll', positionButton, true);
     installButton();
-    if (host.MutationObserver) {
+    if (inlineButton && host.MutationObserver) {
       observer = new host.MutationObserver(() => {
         if (!scheduled) scheduled = host.setTimeout(() => { scheduled = null; installButton(); }, 120);
       });

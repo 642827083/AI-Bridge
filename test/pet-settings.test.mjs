@@ -172,12 +172,15 @@ test('编辑期间其他窗口换图时拒绝覆盖新图片，保留草稿供�
 test('桌宠设置独立于上传保存区域，仅有显示与导入相关功能', async t => {
   const { doc } = await page(t, false);
   assert.equal(doc.querySelector('#pet-settings').closest('form'), null);
-  assert.match(doc.querySelector('#pet-panel .group-heading').textContent, /即时生效/);
+  assert.match(doc.querySelector('#pet-panel .pet-immediate-note').textContent, /即时生效/);
   assert.equal(doc.querySelector('#save'), null);
   assert.equal(doc.querySelector('#pet-image-button').disabled, false); assert.equal(doc.querySelector('#pet-pack-button').disabled, false);
   assert.equal(doc.querySelector('#pet-visible').disabled, false);
   assert.equal(doc.querySelector('#pet-current').textContent, '哦鲸鲸');
   assert.equal(doc.querySelector('#pet-use-builtin').getAttribute('aria-pressed'), 'true');
+  assert.equal(doc.querySelector('#pet-use-builtin').hidden, false);
+  assert.equal(doc.querySelector('#pet-use-pack').hidden, true);
+  assert.equal(doc.querySelector('#pet-use-image').hidden, true);
   assert.doesNotMatch(doc.querySelector('#pet-settings').textContent, /AI|讲解|批改|API|动作风格|随机互动/);
 });
 
@@ -221,9 +224,11 @@ test('已导入图片和动作包均可确认删除，自带哦鲸鲸没有删�
   assert.equal(d.s.settings.source, 'builtin'); assert.equal(d.s.customPet.base64, '');
   assert.equal(doc.querySelector('#pet-current').textContent, '哦鲸鲸'); assert.equal(doc.querySelector('#pet-delete-row').hidden, true);
   assert.equal(doc.querySelector('#pet-use-image').disabled, true);
+  assert.equal(doc.querySelector('#pet-use-image').hidden, true);
   doc.querySelector('#pet-use-pack').click(); await flush();
   assert.equal(doc.querySelector('#pet-delete-row').hidden, false); remove.click(); remove.click(); await flush();
   assert.equal(d.s.petPack, null); assert.equal(d.s.settings.source, 'builtin'); assert.equal(doc.querySelector('#pet-use-pack').disabled, true);
+  assert.equal(doc.querySelector('#pet-use-pack').hidden, true);
   assert.equal(doc.querySelector('#workflow-prompt').value, '未保存的草稿'); assert.equal(calls.some(c => c.command === 'saveSettings'), false);
 });
 
