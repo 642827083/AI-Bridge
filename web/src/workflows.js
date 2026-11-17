@@ -39,7 +39,7 @@ export class Workflows {
   }
   summary(item) {
     const cards = item.cardItems.length ? item.cardItems.slice(0, 3).map(n => '第 ' + n + ' 条').join('、') + (item.cardItems.length > 3 ? ' 等 ' + item.cardItems.length + ' 条' : '') : '无卡片内容';
-    return '桌宠：' + sites[item.site] + ' · ' + cards + ' · ' + handwriting[item.handwriting] + (item.extraText.trim() ? ' · 含提示词' : '');
+    return '联动：' + sites[item.site] + ' · ' + cards + ' · ' + handwriting[item.handwriting] + (item.extraText.trim() ? ' · 含提示词' : '');
   }
   render() {
     this.form.hidden = !this.draft; this.fields.disabled = this.busy;
@@ -115,7 +115,7 @@ export class Workflows {
     this.busy = true; this.render(); this.message('正在保存工作流…');
     try {
       this.record = await MNBridge.send('saveWorkflow', { expectedRevision: this.draft.expectedRevision, workflow });
-      this.draft = null; this.message('工作流已保存，可从网页或桌宠的三横线菜单执行。');
+      this.draft = null; this.message('工作流已保存，可从顶栏三横线菜单执行。');
     } catch (error) { this.message(error.message, true); }
     finally { this.busy = false; this.render(); }
   }

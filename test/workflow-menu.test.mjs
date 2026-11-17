@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { createGPTBridge } from '../web/src/gpt.js';
-import { pets, plain } from './pet-support.mjs';
+import { nativeScene, plain } from './native-support.mjs';
 
 function web(t) {
   const dom = new JSDOM('<form><textarea id="prompt-textarea">原草稿</textarea><div class="tools"><button type="button" id="composer-plus-btn">＋</button><button type="submit">发送</button></div></form>', { url: 'https://chatgpt.com/', pretendToBeVisual: true });
@@ -63,13 +63,13 @@ test('空列表和读取错误仍提供工作流库入口，支持 Escape、点�
 });
 
 function native() {
-  const h = pets(), d = h.open(); vm.runInContext(readFileSync('src/AIBSites.js', 'utf8'), h.context);
+  const h = nativeScene(), d = h.open(); vm.runInContext(readFileSync('src/AIBSites.js', 'utf8'), h.context);
   const c = d.controller; c.activePage = 'gpt'; c.gptView = {}; c.webView = {};
   h.context.AIBSites.get(c, 'gpt').token = 'current';
   const replies = [], runs = [], managed = [];
   h.context.AIBNative.evaluate = async (view, code) => replies.push({ view, code });
   h.context.AIBWorkflowRunner.run = (addon, id, originSite) => runs.push({ addon, id, originSite });
-  h.context.AIBWorkflowPet.manage = addon => managed.push(addon);
+  h.context.AIBWorkflowLibrary.manage = addon => managed.push(addon);
   const store = h.context.AIBWorkflows;
   for (const site of ['gpt', 'gemini', 'doubao']) store.save({ expectedRevision: store.read().revision, workflow: { name: site, site, cardItems: [1], handwriting: 'mindmap', extraText: '不能暴露到菜单的提示词' } });
   return { h, d, c, replies, runs, managed, remote: address => h.context.AIBWebCommands.remote(c, address, c.gptView) };
@@ -97,11 +97,10 @@ test('后台、错视图、过期 token 和无效命令不能读取菜单或执�
   assert.equal(n.replies.length, 0); assert.equal(n.runs.length, 0); assert.equal(n.managed.length, 0);
 });
 
-test('旧豆包工作流恢复到工作流库和桌宠菜单，不修改原存档', () => {
-  const h = pets(), d = h.open(), store = h.context.AIBWorkflows;
+test('旧豆包工作流恢复到工作流库，不修改原存档', () => {
+  const h = nativeScene(), d = h.open(), store = h.context.AIBWorkflows;
   const record = store.save({ expectedRevision: '', workflow: { name: '豆包工作流', site: 'doubao', cardItems: [], handwriting: 'none', extraText: '提示词' } });
   const before = Buffer.from(h.files.get('/documents/AI-Bridge/workflows.json'));
-  assert.deepEqual(plain(store.visible().items), plain(record.items)); h.call(d.addon, 'petWorkflowMenu');
-  assert.deepEqual(Array.from(d.s.workflowMenuItems), [record.items[0].id]); assert.equal(d.s.workflowRowLabels[0].site.text, '豆包');
+  assert.deepEqual(plain(store.visible().items), plain(record.items));
   assert.deepEqual(h.files.get('/documents/AI-Bridge/workflows.json'), before);
 });

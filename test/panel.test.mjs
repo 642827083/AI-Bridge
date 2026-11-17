@@ -31,8 +31,8 @@ function panel(sites = ['deepseek', 'gpt', 'gemini'], nativeWindow = false) {
     UIPanGestureRecognizer: class { constructor(target, action) { this.target = target; this.action = action; } },
     NSURL: { URLWithString: url => url }, NSURLRequest: { requestWithURL: url => url },
     AIBNative: { preference: (key, fallback) => key === 'navigationSites' && sites !== null ? JSON.stringify({ schema: 4, sites }) : fallback, save: () => {}, token: () => 'test', evaluate: async () => 'about:blank', address: request => request.url, value: (object, key) => object?.[key] }, AIBResources: { settingsHTML: '', deepseek: 'deepseek-script', doubao: 'doubao-script', gpt: 'gpt-script', gemini: 'gemini-script' },
-    AIBUpload: { cancel(controller) { controller.uploadOperation = null; }, async call() {} }, AIBWindow: { layout() {} }, AIBPets: { cancel() {}, front() {} },
-    AIBWorkflowRunner: { cancel(controller) { controller.workflowRun = null; } }, AIBWorkflowPet: { reveal() {} }, AIBWorkflowFiles: { cancel(controller) { controller.workflowImport = null; } },
+    AIBUpload: { cancel(controller) { controller.uploadOperation = null; }, async call() {} }, AIBWindow: { layout() {} },
+    AIBWorkflowRunner: { cancel(controller) { controller.workflowRun = null; } }, AIBWorkflowLibrary: { reveal() {} }, AIBWorkflowFiles: { cancel(controller) { controller.workflowImport = null; } },
     AIBSettingsPage: { layout() {}, enter() {}, cancel() {}, finished() {}, failed() {} },
     NSUserDefaults: { standardUserDefaults: () => ({ objectForKey: key => values.get(key), setObjectForKey: (value, key) => values.set(key, value) }) },
     JSB: { defineClass: (name, definition) => { methods = definition; return { new: () => ({ view: new View() }) }; } }
@@ -40,7 +40,7 @@ function panel(sites = ['deepseek', 'gpt', 'gemini'], nativeWindow = false) {
   context.AIBNative.study = () => study;
   if (nativeWindow) vm.runInContext(readFileSync('src/AIBWindow.js', 'utf8'), context);
   for (const file of ['AIBSettings', 'AIBSites', 'AIBNavigationMotion', 'AIBPanelActions', 'AIBToolbarIcons', 'AIBPanel']) vm.runInContext(readFileSync('src/' + file + '.js', 'utf8'), context);
-  const controller = context.AIBPanel.create({ window: {}, petMainPath: '/addon' }); context.self = controller; methods.viewDidLoad();
+  const controller = context.AIBPanel.create({ window: {}, mainPath: '/addon' }); context.self = controller; methods.viewDidLoad();
   return { controller, context, methods, values, study };
 }
 
@@ -259,7 +259,7 @@ test('顶栏菜单向下展示、长列表可滚动，跨站工作流在当前�
 test('顶栏菜单空状态、工作流库和再次点击收起；关闭、换页、网页导航会清理菜单', () => {
   const { controller: c, context, methods } = panel(); c.visible = true;
   context.AIBWorkflows = { visible: () => ({ items: [] }) }; let managed = 0;
-  context.AIBWorkflowPet.manage = () => managed++;
+  context.AIBWorkflowLibrary.manage = () => managed++;
   methods.togglePanelWorkflows(); assert.equal(c.panelActions.empty.text, '还没有工作流'); methods.managePanelWorkflows(); assert.equal(managed, 1); assert.equal(c.panelActions, null);
   methods.togglePanelWorkflows(); methods.togglePanelWorkflows(); assert.equal(c.panelActions, null);
   methods.togglePanelWorkflows(); methods.dismissPanelActions(); assert.equal(c.panelActions, null);

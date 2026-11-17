@@ -87,7 +87,7 @@ var AIBWorkflowFiles = (function () {
   function command(controller, name, p) {
     p = p || {};
     if (name === 'cancelWorkflowImport') return cancel(controller, p.id);
-    if (!controller.visible || controller.disposed || controller.activePage !== 'settings' || controller.addon && controller.addon.petSession && !controller.addon.petSession.active) throw new Error('请在设置页管理工作流文件');
+    if (!controller.visible || controller.disposed || controller.activePage !== 'settings' || controller.addon && controller.addon.sceneActive === false) throw new Error('请在设置页管理工作流文件');
     if (name === 'prepareWorkflowImport') return receive(controller, p);
     if (name === 'commitWorkflowImport') return commit(controller, p);
     if (name === 'exportWorkflows') return exportFile(p);

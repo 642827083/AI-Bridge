@@ -5,7 +5,7 @@ export function setupSettingsNavigation() {
   function select(tab, focus = false) {
     if (tab === selected) { if (focus) tab.focus(); return; }
     if (contentAnimation) { contentAnimation.cancel(); contentAnimation = null; }
-    // 只切换显示，不重新创建表单，保留工作流草稿及桌宠图片编辑状态。
+    // 只切换显示，不重新创建表单，保留工作流草稿。
     for (const item of tabs) {
       const active = item === tab;
       item.setAttribute('aria-selected', String(active));

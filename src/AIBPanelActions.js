@@ -82,7 +82,7 @@ var AIBPanelActions = (function () {
   }
   function manage(controller) {
     var s = controller.panelActions; if (!s || !current(controller, s)) return;
-    close(controller); AIBWorkflowPet.manage(controller.addon);
+    close(controller); AIBWorkflowLibrary.manage(controller.addon);
   }
   function reload(controller, state) {
     if (!current(controller, state)) return;

@@ -28,7 +28,7 @@ var AIBSettingsPage = (function () {
   }
   function reload(controller) {
     // 空白文档已无可用草稿，只重建本地设置页，不刷新 AI 网页。
-    AIBPets.cancel(controller.addon); AIBWorkflowFiles.cancel(controller);
+    AIBWorkflowFiles.cancel(controller);
     controller.settingsToken = N.token();
     controller.settingsView.loadHTMLStringBaseURL(AIBResources.settingsHTML.replace('__AIB_TOKEN_VALUE__', controller.settingsToken), null);
   }
@@ -53,8 +53,7 @@ var AIBSettingsPage = (function () {
         if (status === 'ready') {
           s.checking = false; s.resume = null; controller.settingsPageReady = true;
           if (controller.settingsRecoveryButton) controller.settingsRecoveryButton.hidden = true;
-          N.evaluate(view, 'window.__AIB_PET_REFRESH__&&window.__AIB_PET_REFRESH__()').catch(function () {});
-          AIBWorkflowPet.reveal(controller); return;
+          AIBWorkflowLibrary.reveal(controller); return;
         }
         if (status === 'empty' && !reloaded && !N.value(view, 'loading')) {
           reloaded = true; hint(controller, false);

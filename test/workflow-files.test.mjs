@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pets, plain } from './pet-support.mjs';
+import { nativeScene, plain } from './native-support.mjs';
 const workflow = (name = '讲解', patch = {}) => ({ name, site: 'deepseek', cardItems: [1, 3], handwriting: 'mindmap', extraText: '检查步骤\n然后讲解', ...patch });
 const archive = items => JSON.stringify({ format: 'ai-bridge-workflows', version: 1, workflows: items });
 function setup() {
-  const h = pets(), scene = h.open(), store = h.context.AIBWorkflows;
+  const h = nativeScene(), scene = h.open(), store = h.context.AIBWorkflows;
   const command = (name, payload) => plain(h.context.AIBWorkflowFiles.command(scene.controller, name, payload));
   const save = item => store.save({ expectedRevision: store.read().revision, workflow: item });
   const prepare = (text, revision = store.read().revision, id = 'test-import') => {

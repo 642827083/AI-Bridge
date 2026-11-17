@@ -47,7 +47,7 @@ var AIBPanel = (function () {
     var changed = name !== controller.activePage;
     if (changed) { AIBPanelActions.close(controller); AIBUpload.cancel(controller); AIBWorkflowRunner.cancel(controller); }
     controller.activePage = name;
-    if (name !== 'settings') { AIBPets.cancel(controller.addon); AIBWorkflowFiles.cancel(controller); AIBSettingsPage.cancel(controller); }
+    if (name !== 'settings') { AIBWorkflowFiles.cancel(controller); AIBSettingsPage.cancel(controller); }
     controller.webView.hidden = name !== 'deepseek'; controller.doubaoView.hidden = name !== 'doubao'; controller.gptView.hidden = name !== 'gpt'; controller.geminiView.hidden = name !== 'gemini'; controller.settingsView.hidden = name !== 'settings';
     var blue = UIColor.colorWithRedGreenBlueAlpha(0.30, 0.42, 0.87, 1);
     controller.deepseekButton.setTitleColorForState(name === 'deepseek' ? blue : UIColor.darkGrayColor(), 0);
@@ -116,9 +116,9 @@ var AIBPanel = (function () {
       controller.workflowButton = button(controller, '', 'togglePanelWorkflows:');
       controller.workflowButton.accessibilityLabel = '展开工作流';
       controller.closeButton = button(controller, '', 'closePanel:'); controller.closeButton.accessibilityLabel = '关闭面板';
-      AIBToolbarIcons.add(controller.refreshButton, 'refresh', controller.addon.petMainPath);
-      AIBToolbarIcons.add(controller.workflowButton, 'menu', controller.addon.petMainPath);
-      AIBToolbarIcons.add(controller.closeButton, 'close', controller.addon.petMainPath);
+      AIBToolbarIcons.add(controller.refreshButton, 'refresh', controller.addon.mainPath);
+      AIBToolbarIcons.add(controller.workflowButton, 'menu', controller.addon.mainPath);
+      AIBToolbarIcons.add(controller.closeButton, 'close', controller.addon.mainPath);
       [controller.deepseekButton, controller.doubaoButton, controller.gptButton, controller.geminiButton, controller.settingsButton, controller.refreshButton, controller.workflowButton, controller.closeButton].forEach(function (control) { controller.header.addSubview(control); });
       controller.indicator = new UIView({ x: 0, y: 38, width: 24, height: 3 });
       controller.indicator.backgroundColor = UIColor.colorWithRedGreenBlueAlpha(0.30, 0.42, 0.87, 1); controller.indicator.layer.cornerRadius = 1.5; controller.header.addSubview(controller.indicator);
@@ -144,7 +144,6 @@ var AIBPanel = (function () {
     var study = N.study(controller); if (!study || !study.view) throw new Error('请先打开一个 MN 学习窗口');
     if (!controller.panelReady) { var view = controller.view; setup(controller); }
     refreshNavigation(controller); controller.visible = true; study.view.addSubview(controller.view);
-    AIBPets.front(controller.addon);
     AIBWindow.layout(controller); layout(controller);
     if (typeof study.refreshAddonCommands === 'function') study.refreshAddonCommands();
     if (AIBSites.get(controller)) inject(controller).catch(function () {});
@@ -156,7 +155,6 @@ var AIBPanel = (function () {
     AIBWorkflowFiles.cancel(controller);
     AIBWorkflowRunner.cancel(controller);
     AIBNavigationMotion.stop(controller.indicator);
-    AIBPets.cancel(controller.addon);
     AIBUpload.cancel(controller); controller.visible = false;
     AIBWindow.save(controller); controller.view.endEditing(true); controller.view.removeFromSuperview();
     var study = N.study(controller); if (study && typeof study.refreshAddonCommands === 'function') study.refreshAddonCommands();
@@ -168,7 +166,6 @@ var AIBPanel = (function () {
     AIBWorkflowFiles.cancel(controller);
     AIBWorkflowRunner.cancel(controller);
     AIBNavigationMotion.stop(controller.indicator);
-    AIBPets.cancel(controller.addon);
     AIBUpload.cancel(controller); controller.disposed = true; controller.visible = false;
     AIBSites.all(controller).forEach(function (site) { site.token = ''; site.injectionId++; });
     [controller.webView, controller.doubaoView, controller.gptView, controller.geminiView, controller.settingsView].forEach(function (view) { if (view) { view.delegate = null; view.stopLoading(); } });

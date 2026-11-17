@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { resources } from '../scripts/bundle.mjs';
-import { pets, plain } from './pet-support.mjs';
+import { nativeScene, plain } from './native-support.mjs';
 const { settingsHTML } = await resources();
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const importedText = items => JSON.stringify({ format: 'ai-bridge-workflows', version: 1, workflows: items });
@@ -12,7 +12,7 @@ async function chooseFile(p, text, size = Buffer.byteLength(text)) {
   input.dispatchEvent(new p.window.Event('change'));
   for (let n = 0; n < 12; n++) await flush();
 }
-async function page(t, h = pets()) {
+async function page(t, h = nativeScene()) {
   const scene = h.open(), calls = [];
   const dom = new JSDOM(settingsHTML, { url: 'https://settings.invalid/', runScripts: 'dangerously', beforeParse(window) {
     window.mn = { call: async (command, payload) => {
@@ -34,7 +34,7 @@ async function page(t, h = pets()) {
 }
 
 test('复制完整设置到新草稿，取消不写入，保存保留原项且自动避免副本重名', async t => {
-  const h = pets(), store = h.context.AIBWorkflows;
+  const h = nativeScene(), store = h.context.AIBWorkflows;
   const original = store.save({ expectedRevision: '', workflow: { name: '纯提示词', site: 'gemini', cardItems: [], handwriting: 'none', extraText: '只给我提示\n不要答案' } }).items[0];
   const p = await page(t, h), before = h.writes.length;
   p.doc.querySelector('[data-action="copy"]').click();
@@ -67,7 +67,7 @@ test('导入先预览和勾选，自动重命名，取消保留原列表并允�
 });
 
 test('导出支持勾选并调用系统保存，空选择无法导出，取消不会生成文件', async t => {
-  const h = pets(), store = h.context.AIBWorkflows;
+  const h = nativeScene(), store = h.context.AIBWorkflows;
   for (const name of ['讲解', '批改']) store.save({ expectedRevision: store.read().revision, workflow: { name, site: 'deepseek', cardItems: [1], handwriting: 'none', extraText: '' } });
   const p = await page(t, h); p.click('workflow-export'); p.click('workflow-select-none');
   assert.equal(p.doc.querySelector('#workflow-transfer-confirm').disabled, true); assert.equal(h.savedFiles.length, 0);
@@ -92,7 +92,7 @@ test('损坏或过大的导入文件可重试，保存失败保留勾选和原�
 });
 
 test('接近容量上限时可减少导入选择，达到上限禁止复制，长名称副本限制 24 字符', async t => {
-  const h = pets(), store = h.context.AIBWorkflows, name = '长名称'.repeat(8), item = { name, site: 'gpt', cardItems: [1], handwriting: 'none', extraText: '' };
+  const h = nativeScene(), store = h.context.AIBWorkflows, name = '长名称'.repeat(8), item = { name, site: 'gpt', cardItems: [1], handwriting: 'none', extraText: '' };
   store.save({ expectedRevision: '', workflow: item });
   const p = await page(t, h); p.doc.querySelector('[data-action="copy"]').click();
   assert.equal(p.doc.querySelector('#workflow-name').value.length, 24); p.click('workflow-cancel');
@@ -127,7 +127,7 @@ test('工作流条目展开可收起并保留隐藏勾选，取消不会保存�
   p.click('workflow-more'); assert.equal(grid.querySelector('input[value="10"]').checked, true);
   const enter = new p.window.KeyboardEvent('keydown', { key: 'Enter', cancelable: true });
   p.doc.querySelector('#workflow-prompt').dispatchEvent(enter); assert.equal(enter.defaultPrevented, false);
-  p.click('pet-tab'); p.click('workflows-tab'); assert.equal(grid.querySelector('input[value="10"]').checked, true);
+  p.click('navigation-tab'); p.click('workflows-tab'); assert.equal(grid.querySelector('input[value="10"]').checked, true);
   p.click('workflow-cancel'); await flush(); assert.equal(p.h.context.AIBWorkflows.read().items.length, 0);
   assert.equal(p.calls.some(call => call.command === 'saveSettings' || call.command === 'saveWorkflow'), false);
 });
@@ -152,7 +152,7 @@ test('保存失败保留整个工作流草稿，刷新不会丢失草稿或允�
   p.h.failWrite('/documents/AI-Bridge/workflows.json'); await p.submit();
   assert.equal(p.doc.querySelector('#workflow-name').value, '未保存的流程'); assert.equal(p.doc.querySelector('#workflow-prompt').value, '未保存的提示词');
   assert.match(p.doc.querySelector('#workflow-status').textContent, /保存失败/); assert.equal(p.doc.querySelector('#workflow-fields').disabled, false);
-  p.h.failWrite(''); const other = pets({ files: p.h.files }); other.context.AIBWorkflows.save({ expectedRevision: '', workflow: { name: '另一窗口', site: 'gpt', cardItems: [3], handwriting: 'none', extraText: '' } });
+  p.h.failWrite(''); const other = nativeScene({ files: p.h.files }); other.context.AIBWorkflows.save({ expectedRevision: '', workflow: { name: '另一窗口', site: 'gpt', cardItems: [3], handwriting: 'none', extraText: '' } });
   await p.submit(); assert.match(p.doc.querySelector('#workflow-status').textContent, /其他窗口更新/);
   p.click('workflow-refresh'); await flush(); assert.equal(p.doc.querySelector('#workflow-prompt').value, '未保存的提示词');
   await p.submit(); assert.match(p.doc.querySelector('#workflow-status').textContent, /其他窗口更新/);
@@ -164,7 +164,7 @@ test('无效空工作流被拒绝，纯提示词工作流可保存，管理入�
   await p.submit(); assert.match(p.doc.querySelector('#workflow-status').textContent, /请选择上传内容或填写提示词/);
   p.doc.querySelector('#workflow-prompt').value = '解释所选概念'; await p.submit();
   assert.equal(p.h.context.AIBWorkflows.read().items[0].cardItems.length, 0);
-  p.click('pet-tab'); assert.equal(p.window.__AIB_OPEN_WORKFLOWS__(), true);
+  p.click('navigation-tab'); assert.equal(p.window.__AIB_OPEN_WORKFLOWS__(), true);
   assert.equal(p.doc.querySelector('#workflows-tab').getAttribute('aria-selected'), 'true'); assert.equal(p.doc.querySelector('#workflows-panel').hidden, false);
 });
 

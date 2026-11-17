@@ -4,11 +4,11 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { resources } from '../scripts/bundle.mjs';
-import { pets, plain } from './pet-support.mjs';
+import { nativeScene, plain } from './native-support.mjs';
 const { settingsHTML } = await resources();
 const flush = () => new Promise(resolve => setImmediate(resolve));
 async function panel(t) {
-  const h = pets(), scene = h.open(), context = h.context, documents = [], loads = [];
+  const h = nativeScene(), scene = h.open(), context = h.context, documents = [], loads = [];
   let controller, definition, delayed = false, failing = false;
   context.UIColor.lightGrayColor = () => 'lightgray';
   const loadImage = context.UIImage.imageWithContentsOfFile;
@@ -23,7 +23,7 @@ async function panel(t) {
     const view = this;
     const dom = new JSDOM(html, { url: 'https://settings.invalid/', runScripts: 'dangerously', beforeParse(window) {
       window.scrollTo = () => {};
-      window.mn = { call: async (command, payload) => command === 'getNavigation' ? { sites: ['deepseek'] } : command === 'getWorkflows' ? plain(context.AIBWorkflows.visible()) : plain(context.AIBPets.command(controller, command, payload)) };
+      window.mn = { call: async (command, payload) => command === 'getNavigation' ? { sites: ['deepseek'] } : command === 'getWorkflows' ? plain(context.AIBWorkflows.visible()) : plain(scene.command(command, payload)) };
     } });
     documents.push(dom); view.dom = dom;
   };
@@ -40,13 +40,13 @@ async function panel(t) {
     blank() { const dom = new JSDOM('<!doctype html><html><body></body></html>', { runScripts: 'dangerously' }); documents.push(dom); controller.settingsView.dom = dom; },
     delayed(value) { delayed = value; }, failing(value) { failing = value; },
     finish() { if (!failing) { context.UIWebView.prototype.loadHTMLStringBaseURL.call(controller.settingsView, settingsHTML); } context.self = controller; definition.webViewDidFinishLoad(controller.settingsView); },
-    manage() { context.AIBWorkflowPet.manage(scene.addon); },
+    manage() { context.AIBWorkflowLibrary.manage(scene.addon); },
     async settle(ticks = 24) { for (let n = 0; n < ticks; n++) { await flush(); h.timers.find(timer => timer.valid && timer.seconds < 8)?.fire(); } },
     call(name, ...args) { context.self = controller; return definition[name](...args); }
   };
 }
 
-test('设置文档为空时从桌宠管理工作流进入，恢复设置内容并显示工作流', async t => {
+test('设置文档为空时从菜单管理工作流进入，恢复设置内容并显示工作流', async t => {
   const p = await panel(t); p.manage(); await p.settle();
   assert.equal(p.doc.querySelector('#workflows-panel').hidden, false);
   const before = p.loads.length; p.blank(); p.manage(); await p.settle();
@@ -56,7 +56,7 @@ test('设置文档为空时从桌宠管理工作流进入，恢复设置内容�
   assert.equal(p.loads.length, before + 1);
 });
 
-test('健康设置页反复从桌宠和顶栏进入不重载，不丢失工作流编辑草稿', async t => {
+test('健康设置页反复从工作流库和顶栏进入不重载，不丢失工作流编辑草稿', async t => {
   const p = await panel(t); p.manage(); await p.settle(); const before = p.loads.length;
   p.doc.querySelector('#workflow-new').click(); p.doc.querySelector('#workflow-name').value = '尚未保存';
   p.doc.querySelector('#workflow-prompt').value = '保留这段提示词';

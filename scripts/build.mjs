@@ -28,13 +28,6 @@ for (const [name, source] of Object.entries({ refresh: 'rotate-cw', menu: 'menu'
   writeFileSync('src/web-dist/toolbar/' + name + '@3x.png', optimizeToolbarPNG(new Resvg(svg, { fitTo: { mode: 'width', value: 60 } }).render().asPng()));
 }
 for (const file of ['LICENSE', 'SOURCE.md']) writeFileSync('src/web-dist/toolbar/' + file, readFileSync('assets/toolbar/' + file));
-mkdirSync('src/web-dist/pet-motion', { recursive: true });
-writeFileSync('src/web-dist/pet-motion/index.html', resource.petMotionHTML);
-writeFileSync('src/web-dist/pet-motion/player.js', resource.petMotionPlayer);
-writeFileSync('src/web-dist/fflate-LICENSE.txt', readFileSync('node_modules/fflate/LICENSE'));
-mkdirSync('src/web-dist/pet-builtin', { recursive: true });
-writeFileSync('src/web-dist/pet-builtin/DSniang1.png', readFileSync('assets/pet/DSniang1-256.png'));
-for (const file of ['SOURCE.md', 'UPSTREAM-PROVENANCE.md']) writeFileSync('src/web-dist/pet-builtin/' + file, readFileSync('assets/pet/' + file));
 const files = {};
 function collect(directory, prefix = '') {
   for (const item of readdirSync(directory, { withFileTypes: true })) {
@@ -43,7 +36,8 @@ function collect(directory, prefix = '') {
   }
 }
 collect('src');
-for (const name of ['main.js', 'mnaddon.json', 'icon.png', 'web-dist/Resources.js', manifest.panel, 'web-dist/toolbar/refresh@3x.png', 'web-dist/toolbar/menu@3x.png', 'web-dist/toolbar/close@3x.png', 'web-dist/toolbar/LICENSE', 'web-dist/pet-motion/index.html', 'web-dist/pet-motion/player.js', 'web-dist/pet-builtin/DSniang1.png', 'web-dist/pet-builtin/SOURCE.md', 'web-dist/pet-builtin/UPSTREAM-PROVENANCE.md']) if (!files[name]) throw new Error('安装包缺少：' + name);
+if (Object.keys(files).some(name => /pet/i.test(name))) throw new Error('安装包仍包含桌宠文件');
+for (const name of ['main.js', 'mnaddon.json', 'icon.png', 'web-dist/Resources.js', manifest.panel, 'web-dist/toolbar/refresh@3x.png', 'web-dist/toolbar/menu@3x.png', 'web-dist/toolbar/close@3x.png', 'web-dist/toolbar/LICENSE']) if (!files[name]) throw new Error('安装包缺少：' + name);
 for (const match of readFileSync('src/main.js', 'utf8').matchAll(/JSB\.require\('([^']+)'\)/g)) if (!files[match[1] + '.js']) throw new Error('入口引用缺失：' + match[1]);
 const archive = zipSync(files, { level: 9 }); writeFileSync(output, archive);
 const unpacked = unzipSync(new Uint8Array(readFileSync(output)));

@@ -21,7 +21,6 @@ async function page(t, settings = defaults, handler, configure) {
       if (command === 'getSettings') return structuredClone(settings);
       if (command === 'getWorkflows') return { schema: 1, revision: '', items: [] };
       if (command === 'getNavigation') return { sites: ['deepseek', 'doubao'] };
-      if (command === 'getPetState') return { settings: { source: 'pack', visible: true, size: 112, opacity: 1 }, available: false, pack: null, image: { hasImage: false }, warning: '' };
       calls.push(structuredClone(payload)); return handler ? handler(payload) : payload;
     } };
   } });
@@ -53,12 +52,12 @@ test('切换仅淡入新内容，重复点击当前分类不重启动画，快�
     };
   });
   const slider = doc.querySelector('.settings-navigation-slider');
-  doc.querySelector('#workflows-tab').click(); doc.querySelector('#workflows-tab').click();
-  assert.equal(animations.length, 1); assert.equal(animations[0].id, 'workflows-panel');
+  doc.querySelector('#navigation-tab').click(); doc.querySelector('#navigation-tab').click();
+  assert.equal(animations.length, 1); assert.equal(animations[0].id, 'navigation-panel');
   assert.deepEqual(Array.from(animations[0].frames, frame => frame.opacity), [.4, 1]);
   assert.equal(animations[0].options.duration, 180); assert.equal(animations[0].cancelled, false);
-  doc.querySelector('#navigation-tab').click();
-  assert.equal(animations[0].cancelled, true); assert.equal(animations[1].id, 'navigation-panel');
+  doc.querySelector('#workflows-tab').click();
+  assert.equal(animations[0].cancelled, true); assert.equal(animations[1].id, 'workflows-panel');
   assert.equal(doc.querySelector('.settings-navigation-slider'), slider);
   assert.equal(doc.querySelectorAll('.settings-navigation-slider').length, 1);
 });
@@ -75,33 +74,28 @@ test('减少动态效果时保留分类切换而不播放内容动画', async t 
 
 test('设置分类支持方向键切换和首尾定位，焦点只进入当前分类', async t => {
   const { doc, host } = await page(t);
-  const upload = doc.querySelector('#pet-tab'), pet = doc.querySelector('#workflows-tab'), navigation = doc.querySelector('#navigation-tab');
-  upload.focus(); upload.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  assert.equal(doc.activeElement, pet); assert.equal(upload.tabIndex, -1); assert.equal(pet.tabIndex, 0);
-  pet.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  assert.equal(doc.activeElement, navigation);
+  const workflow = doc.querySelector('#workflows-tab'), navigation = doc.querySelector('#navigation-tab');
+  workflow.focus(); workflow.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+  assert.equal(doc.activeElement, navigation); assert.equal(workflow.tabIndex, -1); assert.equal(navigation.tabIndex, 0);
   navigation.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
-  assert.equal(doc.activeElement, upload);
-  upload.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+  assert.equal(doc.activeElement, workflow);
+  workflow.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'End', bubbles: true }));
   assert.equal(doc.activeElement, navigation);
   navigation.dispatchEvent(new host.KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
-  assert.equal(doc.activeElement, upload); assert.equal(doc.querySelector('#pet-panel').hidden, false);
+  assert.equal(doc.activeElement, workflow); assert.equal(doc.querySelector('#workflows-panel').hidden, false);
 });
 
-
-test('设置胶囊为桌宠、工作流、关于插件，工作流独立管理且不再读取通用上传设置', async t => {
+test('设置只保留工作流和关于插件，默认工作流且切换保留草稿', async t => {
   const { doc } = await page(t);
-  assert.deepEqual(Array.from(doc.querySelectorAll('[role="tab"]'), el => el.textContent), ['桌宠', '工作流', '关于插件']);
-  assert.equal(doc.querySelector('#pet-panel').hidden, false); assert.equal(doc.querySelector('#workflows-panel').hidden, true);
-  assert.equal(doc.querySelector('#settings,#upload-tab,#extraText'), null);
+  assert.deepEqual(Array.from(doc.querySelectorAll('[role="tab"]'), el => el.textContent), ['工作流', '关于插件']);
+  assert.equal(doc.querySelector('#workflows-panel').hidden, false);
+  assert.equal(doc.querySelector('#pet-panel,#pet-editor,#pet-tab,#settings,#upload-tab,#extraText'), null);
   assert.equal(doc.querySelector('#workflow-editor').closest('[role="tabpanel"]').id, 'workflows-panel');
-  assert.equal(doc.querySelector('#pet-panel #workflow-list'), null);
   assert.deepEqual(Array.from(doc.querySelector('#workflow-site').options, el => el.value), ['deepseek', 'doubao', 'gpt', 'gemini']);
-  doc.querySelector('#workflows-tab').click(); doc.querySelector('#workflow-new').click();
-  doc.querySelector('#workflow-prompt').value = '未保存的工作流草稿';
-  doc.querySelector('#pet-tab').click(); doc.querySelector('#workflows-tab').click();
+  doc.querySelector('#workflow-new').click(); doc.querySelector('#workflow-prompt').value = '未保存的工作流草稿';
+  doc.querySelector('#navigation-tab').click(); doc.querySelector('#workflows-tab').click();
   assert.equal(doc.querySelector('#workflow-prompt').value, '未保存的工作流草稿');
-  assert.equal(doc.querySelector('.settings-navigation-slider').style.transform, 'translate3d(100%,0,0)');
+  assert.equal(doc.querySelector('.settings-navigation-slider').style.transform, 'translate3d(0%,0,0)');
   assert.equal(doc.body.textContent.includes('豆包'), true);
 });
 

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   button.addEventListener('click', () => {
     button.disabled = true;
     const nav = document.querySelector('.settings-navigation'), slider = document.querySelector('.settings-navigation-slider');
-    const tabs = ['pet-tab', 'navigation-tab', 'upload-tab', 'navigation-tab'].map(id => document.getElementById(id));
+    const tabs = ['navigation-tab', 'workflows-tab', 'navigation-tab', 'workflows-tab'].map(id => document.getElementById(id));
     const initial = nav.getBoundingClientRect(); let index = 0, frames = 0, failed = '', started = performance.now();
     function sample(now) {
       if (index < tabs.length && now - started >= index * 70) tabs[index++].click();

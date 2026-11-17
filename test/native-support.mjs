@@ -1,14 +1,9 @@
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
-export const picture = readFileSync('test/fixtures/pet-256.png').toString('base64');
-export const builtin = readFileSync('assets/pet/DSniang1-256.png');
-export const pack = { schema: 1, manifest: JSON.parse(readFileSync('test/fixtures/pet.json')), files: {
-  'poster.png': readFileSync('test/fixtures/pet-poster.png').toString('base64'),
-  'actions/idle.webp': readFileSync('test/fixtures/pet-idle.webp').toString('base64')
-}, license: readFileSync('test/fixtures/pet-LICENSE.txt', 'utf8') };
+export const picture = readFileSync('test/fixtures/upload-image.png').toString('base64');
 export const plain = value => JSON.parse(JSON.stringify(value));
-export function pets({ files = new Map(), values = new Map() } = {}) {
-  const bytesAt = path => path === '/addon/web-dist/pet-builtin/DSniang1.png' ? builtin : files.get(path);
+export function nativeScene({ files = new Map(), values = new Map() } = {}) {
+  const bytesAt = path => files.get(path);
   const timers = [], views = new Map(), classes = new Map(), writes = [], hud = [], savedFiles = []; let failPath = '', decodeFails = false;
   class View {
     constructor(frame) { this.frame = frame; this.subviews = []; this.layer = {}; this.gestures = []; this.userInteractionEnabled = true; this.titleLabel = {}; }
@@ -33,9 +28,7 @@ export function pets({ files = new Map(), values = new Map() } = {}) {
     loadFileURLAllowingReadAccessToURL(url, root) { this.loaded = { url, root }; call(this.delegate, 'webViewDidFinishLoad', this); }
     evaluateJavaScript(code, callback) {
       this.scripts.push(code);
-      const match = /^AIBPetAnimation.play\((.*),(\d+)\)$/.exec(code);
-      if (match) { this.payload = JSON.parse(match[1]); this.token = Number(match[2]); }
-      if (callback) callback(code.includes('AIBPetAnimation') ? 'ready:' + this.token : true);
+      if (callback) callback(true);
     }
     stopLoading() { this.stopped = true; }
   }
@@ -61,24 +54,21 @@ export function pets({ files = new Map(), values = new Map() } = {}) {
     AIBUpload: { cancel() {} }, AIBPanel: { dispose(c) { c.disposed = true; } },
     JSB: { defineClass: (name, methods, statics) => { const value = { methods, statics }; classes.set(name.split(' ')[0], value); return value; } }
   });
-  for (const name of ['AIBNative', 'AIBSettings', 'AIBWorkflows', 'AIBWorkflowFiles', 'AIBPetModel', 'AIBBuiltinPet', 'AIBPetPackModel', 'AIBPetStorage', 'AIBPetPackStore', 'AIBPetImageStore', 'AIBPetAnimationPlayer', 'AIBPetInteraction', 'AIBWorkflowPet', 'AIBPetOverlay', 'AIBPets', 'AIBWorkflowRunner', 'WebBridgeCommands', 'AIBAddon']) vm.runInContext(readFileSync('src/' + name + '.js', 'utf8'), context);
+  for (const name of ['AIBNative', 'AIBSettings', 'AIBWorkflows', 'AIBWorkflowFiles', 'AIBWorkflowLibrary', 'AIBWorkflowRunner', 'WebBridgeCommands', 'AIBExternalWorkflows', 'AIBAddon']) vm.runInContext(readFileSync('src/' + name + '.js', 'utf8'), context);
   const addonClass = context.createAiBridgeAddon('/addon');
   function call(instance, method, ...args) { const previous = context.self; context.self = instance; try { return addonClass.methods[method](...args); } finally { context.self = previous; } }
   function open() {
-    const addon = { window: {} }; call(addon, 'sceneWillConnect'); addon.petSession.mountTimer.fire();
+    const addon = { window: {} }; call(addon, 'sceneWillConnect');
     const controller = { addon, visible: true, activePage: 'settings', settingsToken: 'settings', settingsView: new Web({ x: 0, y: 0, width: 700, height: 500 }) };
     addon.panelController = controller;
-    return { addon, s: addon.petSession, controller, command: (name, payload) => context.AIBPets.command(controller, name, payload) };
+    return { addon, controller, command: (name, payload) => {
+      if (name === 'getSettings') return context.AIBSettings.read();
+      if (name === 'saveSettings') return context.AIBSettings.write(payload);
+      if (name === 'getNavigation') return context.AIBSettings.readNavigation();
+      if (name === 'saveNavigation') return context.AIBSettings.writeNavigation(payload);
+      throw new Error('不支持的设置命令');
+    } };
   }
-  function upload(d, source = 'pack', value = pack, expected) {
-    const text = source === 'pack' ? JSON.stringify(value) : value;
-    const name = source === 'pack' ? 'importPetPack' : 'importPetImage';
-    const revision = source === 'pack' ? d.s.packRevision : d.s.customPet.revision;
-    const id = 'fixture';
-    d.command(name, { phase: 'begin', id, length: text.length, expectedRevision: expected ?? revision ?? '', name: '图片角色', style: 'still', anchorX: 0.5 });
-    for (let offset = 0; offset < text.length; offset += 32768) d.command(name, { phase: 'chunk', id, offset, text: text.slice(offset, offset + 32768) });
-    return d.command(name, { phase: 'finish', id });
-  }
-  return { context, addonClass, open, call, upload, files, values, timers, views, writes, hud, savedFiles,
+  return { context, addonClass, open, call, files, values, timers, views, writes, hud, savedFiles,
     failWrite(path) { failPath = path; }, failDecode(value) { decodeFails = value; } };
 }

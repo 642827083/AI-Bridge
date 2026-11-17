@@ -24,8 +24,6 @@ var AIBWebCommands = (function () {
       else if (request.command === 'saveSettings') {
         if (!controller.uploadOperation || !controller.uploadOperation.customSettings) AIBUpload.cancel(controller);
         payload = AIBSettings.write(request.payload);
-      } else if (['getPetState', 'getPetAsset', 'setPetOptions', 'importPetPack', 'importPetImage', 'cancelPetImport', 'deletePet'].indexOf(request.command) >= 0) {
-        payload = AIBPets.command(controller, request.command, request.payload);
       } else throw new Error('不支持的设置命令');
       reply(view, request.requestId, payload, null);
     } catch (error) { if (request && request.token === controller.settingsToken) reply(view, request.requestId, null, String(error.message || error)); }
@@ -45,7 +43,7 @@ var AIBWebCommands = (function () {
       catch (failure) { error = String(failure.message || failure); }
       AIBNative.evaluate(view, site.prefix + '.workflowMenu(' + AIBNative.script(match[4]) + ',' + AIBNative.script({ items: items, error: error }) + ')').catch(function () {});
     } else if (match[1] === 'workflow' && match[3] === 'id' && /^wf-/.test(match[4])) AIBWorkflowRunner.run(controller.addon, match[4], site.name);
-    else if (match[1] === 'workflow-library' && !match[3]) AIBWorkflowPet.manage(controller.addon);
+    else if (match[1] === 'workflow-library' && !match[3]) AIBWorkflowLibrary.manage(controller.addon);
     else return false;
     return true;
   }

@@ -27,5 +27,26 @@ var AIBNotes = (function () {
     };
     return snapshot;
   }
-  return { selection: selection, capture: capture };
+  function captureExternal(addon, input) {
+    var expected = { noteId: input.noteId, notebookId: input.notebookId }, baselineFocus;
+    if (typeof expected.noteId !== 'string' || !expected.noteId || expected.noteId.length > 256 || typeof expected.notebookId !== 'string' || !expected.notebookId || expected.notebookId.length > 256) throw new Error('卡片上下文无效，请重新选择');
+    function validate() {
+      var notebook = N.study({ addon: addon }).notebookController;
+      if (String(N.value(notebook, 'notebookId') || '') !== expected.notebookId) throw new Error('学习集已切换，本次工作流已停止');
+      var nodes = N.items(N.value(N.value(notebook, 'mindmapView'), 'selViewLst'));
+      if (nodes.length > 1) throw new Error('请只选中一张卡片');
+      var note = nodes[0];
+      for (var i = 0; note && !N.value(note, 'noteId') && i < 3; i++) note = N.value(note, 'note');
+      var selectedId = String(N.value(note, 'noteId') || '');
+      var focusId = String(N.value(N.value(notebook, 'visibleFocusNote') || N.value(notebook, 'focusNote'), 'noteId') || '');
+      if (baselineFocus === undefined) baselineFocus = focusId;
+      if (nodes.length && selectedId !== expected.noteId || !nodes.length && focusId !== baselineFocus && focusId !== expected.noteId) throw new Error('所选卡片已切换，本次工作流已停止');
+      var db = typeof Database !== 'undefined' && Database.sharedInstance(), live = db && db.getNoteById(expected.noteId);
+      if (!live || String(N.value(live, 'notebookId') || '') !== expected.notebookId) throw new Error('卡片已删除或不在当前学习集中');
+      var active = N.value(N.app(), 'focusWindow');
+      if (active && active !== addon.window) throw new Error('学习窗口已切换，本次工作流已停止');
+    }
+    validate(); expected.validate = validate; return expected;
+  }
+  return { selection: selection, capture: capture, captureExternal: captureExternal };
 })();
