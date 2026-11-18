@@ -4,11 +4,12 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
 function environment() {
-  const values = new Map(), notices = [], views = [{ note: { noteId: 'note-1' } }];
+  const values = new Map(), notices = [], opened = [], views = [{ note: { noteId: 'note-1' } }];
   const notebook = { notebookId: 'book-1', mindmapView: { selViewLst: views } };
   const study = { notebookController: notebook, view: { bounds: { x: 0, y: 0, width: 1024, height: 768 } } };
   const notes = new Map([['note-1', { noteId: 'note-1', notebookId: 'book-1' }]]);
-  const context = vm.createContext({ console, Application: { sharedInstance: () => ({ studyController: () => study, showHUD: text => notices.push(text) }) },
+  const context = vm.createContext({ console, Application: { sharedInstance: () => ({ studyController: () => study, showHUD: text => notices.push(text), openURL: url => opened.push(url) }) },
+    NSURL: { URLWithString: url => ({ absoluteString: url }) },
     Database: { sharedInstance: () => ({ getNoteById: id => notes.get(id) }) },
     NSUserDefaults: { standardUserDefaults: () => ({ objectForKey: key => values.get(key), setObjectForKey: (value, key) => values.set(key, value) }) },
     NSTimer: { scheduledTimerWithTimeInterval: (seconds, repeat, callback) => { const timer = setTimeout(callback, Math.min(seconds * 1000, 50)); return { invalidate: () => clearTimeout(timer) }; } }
@@ -17,7 +18,7 @@ function environment() {
     vm.runInContext(readFileSync('src/' + name + '.js', 'utf8'), context);
   }
   const controller = { addon: { window: {} }, activePage: 'deepseek', visible: true, pageEpoch: 0 };
-  return { context, controller, values, notices, notebook, notes, study };
+  return { context, controller, values, notices, opened, notebook, notes, study };
 }
 test('设置按插件前缀保存，非法旧数据恢复默认值', () => {
   const { context, values } = environment();
@@ -88,6 +89,19 @@ test('导航设置仅通过本地设置页保存并刷新导航，拒绝空网�
   assert.equal(send([]), true); assert.equal(refreshed, 1);
   assert.match(replies.at(-1), /至少保留一个网页/);
   assert.deepEqual(Array.from(context.AIBSettings.readNavigation().sites), ['gpt']);
+});
+
+test('关于插件只允许打开说明与下载工作流两个地址', () => {
+  const { context, controller, opened } = environment();
+  controller.settingsView = {}; controller.settingsToken = 'settings';
+  const replies = []; context.AIBNative.evaluate = async (view, code) => { replies.push(code); };
+  const send = url => context.AIBWebCommands.local(controller,
+    'mnaddon://bridge?payload=' + encodeURIComponent(JSON.stringify({ token: 'settings', requestId: 'open', command: 'openURL', payload: { url } })), controller.settingsView);
+  assert.equal(send('https://example.com/'), true); assert.match(replies.at(-1), /链接无效/); assert.equal(opened.length, 0);
+  assert.equal(send('https://bbs.marginnote.com.cn/t/topic/68798'), true); assert.equal(opened.length, 1);
+  assert.equal(opened[0].absoluteString, 'https://bbs.marginnote.com.cn/t/topic/68798');
+  assert.equal(send('https://qiaomu-joe-garden.pages.dev/'), true); assert.equal(opened.length, 2);
+  assert.equal(opened[1].absoluteString, 'https://qiaomu-joe-garden.pages.dev/');
 });
 
 for (const name of ['deepseek', 'doubao', 'gpt', 'gemini']) test(name + ' 完整上传调用顺序、清理及只报告附件交付', async () => {

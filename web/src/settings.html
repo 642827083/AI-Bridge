@@ -40,21 +40,41 @@
   <div class="workflow-footer"><p id="workflow-status" role="status" aria-live="polite">正在读取工作流…</p><button id="workflow-refresh" type="button" class="quiet">刷新列表</button></div>
   </div>
   <div id="navigation-panel" role="tabpanel" aria-labelledby="navigation-tab" hidden>
-    <div class="group-heading"><h2>关于插件</h2><span>Ai Bridge</span></div>
-    <section class="navigation-preferences" aria-label="导航栏显示设置">
-      <fieldset id="navigation-fields" disabled>
-        <legend>顶部导航显示</legend>
-        <div class="navigation-options">
-        <label class="navigation-choice"><span>DeepSeek</span><input type="checkbox" value="deepseek" checked></label>
-        <label class="navigation-choice"><span>豆包</span><input type="checkbox" value="doubao" checked></label>
-        <label class="navigation-choice"><span>GPT</span><input type="checkbox" value="gpt"></label>
-        <label class="navigation-choice"><span>Gemini</span><input type="checkbox" value="gemini"></label>
-        <label class="navigation-choice navigation-required"><span>设置</span><input type="checkbox" checked disabled></label>
-        </div>
-      </fieldset>
+    <div class="group-heading"><h2>关于插件</h2></div>
+    <section class="about-links" aria-label="插件信息与入口">
+      <div class="about-row about-row-info">
+        <span class="about-row-text"><strong>Ai Bridge</strong><small>v__AIB_VERSION__ · __AIB_AUTHOR__</small></span>
+      </div>
+      <button class="about-row" type="button" data-url="https://bbs.marginnote.com.cn/t/topic/68798">
+        <span class="about-row-text"><strong>插件说明与反馈</strong><small>查看使用说明，反馈问题与建议</small></span>
+        <span class="about-row-chevron" aria-hidden="true">›</span>
+      </button>
+      <button class="about-row" type="button" data-url="https://qiaomu-joe-garden.pages.dev/">
+        <span class="about-row-text"><strong>下载工作流</strong><small>前往网站制作</small></span>
+        <span class="about-row-chevron" aria-hidden="true">›</span>
+      </button>
+      <button class="about-row" id="navigation-open" type="button" aria-haspopup="dialog" aria-controls="navigation-dialog" aria-expanded="false">
+        <span class="about-row-text"><strong>顶部导航</strong><small id="navigation-summary">选择哪些网站显示在插件顶部的导航里</small></span>
+        <span class="about-row-chevron" aria-hidden="true">›</span>
+      </button>
     </section>
-    <p class="hint">至少保留一个网页，设置固定显示。隐藏网页只收起导航入口，已打开的网页和草稿会保留。</p>
-    <p id="navigation-status" role="status" aria-live="polite">正在读取导航栏设置…</p>
+    <p class="hint">勾选的网站显示在顶部导航；取消勾选只是收起入口，网页和草稿都会保留。</p>
+    <p id="about-status" role="status" aria-live="polite" hidden></p>
+    <p id="navigation-status" role="status" aria-live="polite"></p>
+    <div id="navigation-dialog" class="navigation-dialog" hidden>
+      <div class="navigation-dialog-mask" id="navigation-dialog-mask"></div>
+      <div class="navigation-dialog-card" role="dialog" aria-modal="true" aria-labelledby="navigation-dialog-title">
+        <h3 id="navigation-dialog-title">顶部导航显示</h3>
+        <fieldset id="navigation-fields" disabled>
+          <legend class="visually-hidden">顶部导航显示</legend>
+          <label class="navigation-choice"><span class="navigation-choice-name">DeepSeek</span><input type="checkbox" value="deepseek" checked><span class="navigation-check" aria-hidden="true"></span></label>
+          <label class="navigation-choice"><span class="navigation-choice-name">豆包</span><input type="checkbox" value="doubao" checked><span class="navigation-check" aria-hidden="true"></span></label>
+          <label class="navigation-choice"><span class="navigation-choice-name">GPT</span><input type="checkbox" value="gpt"><span class="navigation-check" aria-hidden="true"></span></label>
+          <label class="navigation-choice"><span class="navigation-choice-name">Gemini</span><input type="checkbox" value="gemini"><span class="navigation-check" aria-hidden="true"></span></label>
+        </fieldset>
+        <button class="navigation-dialog-cancel" id="navigation-dialog-cancel" type="button">取消</button>
+      </div>
+    </div>
   </div>
 </main>
 <script>window.__AIB_SETTINGS_TOKEN__="__AIB_TOKEN_VALUE__";</script>

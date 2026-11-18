@@ -4,7 +4,7 @@ export const picture = readFileSync('test/fixtures/upload-image.png').toString('
 export const plain = value => JSON.parse(JSON.stringify(value));
 export function nativeScene({ files = new Map(), values = new Map() } = {}) {
   const bytesAt = path => files.get(path);
-  const timers = [], views = new Map(), classes = new Map(), writes = [], hud = [], savedFiles = []; let failPath = '', decodeFails = false;
+  const timers = [], views = new Map(), classes = new Map(), writes = [], hud = [], savedFiles = [], opened = []; let failPath = '', decodeFails = false;
   class View {
     constructor(frame) { this.frame = frame; this.subviews = []; this.layer = {}; this.gestures = []; this.userInteractionEnabled = true; this.titleLabel = {}; }
     get bounds() { return { x: 0, y: 0, width: this.frame.width, height: this.frame.height }; }
@@ -42,7 +42,7 @@ export function nativeScene({ files = new Map(), values = new Map() } = {}) {
   const context = vm.createContext({ console, UIView: View, UIImageView: View, UIWebView: Web, UIButton: View, UILabel: View, UIScrollView: View,
     UIImage: { imageWithData: image, imageWithContentsOfFile: path => image(bytesAt(path) ? data(bytesAt(path)) : null) },
     UIColor: { clearColor: () => 'transparent', whiteColor: () => 'white', darkGrayColor: () => 'gray', colorWithWhiteAlpha: (white, alpha) => ({ white, alpha }), colorWithRedGreenBlueAlpha: (...rgba) => rgba },
-    UIFont: { systemFontOfSize: size => ({ size }), boldSystemFontOfSize: size => ({ size, bold: true }) }, NSURL: { fileURLWithPath: path => ({ scheme: 'file', path }) },
+    UIFont: { systemFontOfSize: size => ({ size }), boldSystemFontOfSize: size => ({ size, bold: true }) }, NSURL: { fileURLWithPath: path => ({ scheme: 'file', path }), URLWithString: url => ({ absoluteString: url }) },
     UIPanGestureRecognizer: class { constructor(target, selector) { this.target = target; this.selector = selector; } },
     UITapGestureRecognizer: class { constructor(target, selector) { this.target = target; this.selector = selector; } requireGestureRecognizerToFail(gesture) { this.waitFor = gesture; } },
     NSData: { dataWithStringEncoding: (text, encoding) => { if (encoding !== 5) throw Error('需要 Latin1'); return data(Buffer.from(text, 'latin1')); } },
@@ -50,7 +50,7 @@ export function nativeScene({ files = new Map(), values = new Map() } = {}) {
     NSFileManager: { defaultManager: () => ({ fileExistsAtPath: path => !!bytesAt(path), createDirectoryAtPathWithIntermediateDirectoriesAttributes: () => true, contentsAtPath: path => bytesAt(path) ? data(bytesAt(path)) : null }) },
     NSUserDefaults: { standardUserDefaults: () => ({ objectForKey: key => values.get(key), setObjectForKey: (value, key) => values.set(key, value) }) },
     NSTimer: { scheduledTimerWithTimeInterval: (seconds, repeat, callback) => { const timer = { seconds, valid: true, invalidate() { this.valid = false; }, fire() { if (this.valid) { this.valid = false; callback(); } } }; timers.push(timer); return timer; } },
-    Application: { sharedInstance: () => ({ documentPath: '/documents', tempPath: '/temp', saveFileWithUti: (path, uti) => savedFiles.push({ path, uti }), studyController: window => { if (!views.has(window)) views.set(window, { view: new View({ x: 0, y: 0, width: 1024, height: 768 }) }); return views.get(window); }, showHUD: message => hud.push(message) }) },
+    Application: { sharedInstance: () => ({ documentPath: '/documents', tempPath: '/temp', saveFileWithUti: (path, uti) => savedFiles.push({ path, uti }), studyController: window => { if (!views.has(window)) views.set(window, { view: new View({ x: 0, y: 0, width: 1024, height: 768 }) }); return views.get(window); }, showHUD: message => hud.push(message), openURL: url => opened.push(url) }) },
     AIBUpload: { cancel() {} }, AIBPanel: { dispose(c) { c.disposed = true; } },
     JSB: { defineClass: (name, methods, statics) => { const value = { methods, statics }; classes.set(name.split(' ')[0], value); return value; } }
   });
@@ -69,6 +69,6 @@ export function nativeScene({ files = new Map(), values = new Map() } = {}) {
       throw new Error('不支持的设置命令');
     } };
   }
-  return { context, addonClass, open, call, files, values, timers, views, writes, hud, savedFiles,
+  return { context, addonClass, open, call, files, values, timers, views, writes, hud, savedFiles, opened,
     failWrite(path) { failPath = path; }, failDecode(value) { decodeFails = value; } };
 }

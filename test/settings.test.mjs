@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { resources } from '../scripts/bundle.mjs';
 const { settingsHTML } = await resources();
+const manifest = JSON.parse(readFileSync('src/mnaddon.json', 'utf8'));
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const defaults = { schema: 2, cardItems: [1, 3], handwriting: 'last', extraText: '原有提示词 $x^2$' };
 function native() {
@@ -99,16 +100,56 @@ test('设置只保留工作流和关于插件，默认工作流且切换保留�
   assert.equal(doc.body.textContent.includes('豆包'), true);
 });
 
-test('默认勾选 DeepSeek、豆包和设置，网页至少保留一个，GPT 和 Gemini 可自行开启', async t => {
+test('关于插件显示版本、说明反馈和下载工作流，点击交给原生打开', async t => {
+  const { doc, calls } = await page(t);
+  assert.equal(doc.querySelector('#about-version'), null);
+  const info = doc.querySelector('.about-row-info');
+  assert.equal(info.querySelector('strong').textContent, 'Ai Bridge');
+  assert.equal(info.querySelector('small').textContent, 'v' + manifest.version + ' · ' + manifest.author);
+  const rows = Array.from(doc.querySelectorAll('.about-row[data-url]'));
+  assert.deepEqual(rows.map(row => row.dataset.url), ['https://bbs.marginnote.com.cn/t/topic/68798', 'https://qiaomu-joe-garden.pages.dev/']);
+  assert.deepEqual(rows.map(row => row.querySelector('strong').textContent), ['插件说明与反馈', '下载工作流']);
+  assert.deepEqual(rows.map(row => row.querySelector('small').textContent), ['查看使用说明，反馈问题与建议', '前往网站制作']);
+  rows[0].click(); await flush(); assert.deepEqual(calls.at(-1), { url: rows[0].dataset.url });
+  rows[1].click(); await flush(); assert.deepEqual(calls.at(-1), { url: rows[1].dataset.url });
+});
+
+test('打开关于插件链接失败时在页面下方提示', async t => {
+  const { doc } = await page(t, defaults, () => ({ error: { message: '当前无法打开网页' } }));
+  doc.querySelector('.about-row[data-url]').click(); await flush();
+  const status = doc.querySelector('#about-status');
+  assert.equal(status.hidden, false); assert.match(status.textContent, /当前无法打开网页/);
+});
+
+test('顶部导航只列四个 AI 网站，不出现设置，至少保留一个网页', async t => {
   const { doc, calls } = await page(t);
   const box = name => doc.querySelector('#navigation-fields input[value="' + name + '"]');
+  assert.deepEqual(Array.from(doc.querySelectorAll('#navigation-fields input'), el => el.value), ['deepseek', 'doubao', 'gpt', 'gemini']);
+  assert.equal(doc.body.textContent.includes('固定'), false);
+  assert.equal(doc.querySelector('#navigation-open strong').textContent, '顶部导航');
+  assert.equal(doc.querySelector('#navigation-summary').textContent, '选择哪些网站显示在插件顶部的导航里');
+  assert.match(doc.querySelector('#navigation-panel .hint').textContent, /勾选的网站显示在顶部导航；取消勾选只是收起入口，网页和草稿都会保留。/);
   assert.equal(box('deepseek').checked, true); assert.equal(box('deepseek').disabled, false); assert.equal(box('doubao').checked, true);
   assert.equal(box('gpt').checked, false); assert.equal(box('gemini').checked, false);
   box('gpt').click(); await flush(); box('deepseek').click(); await flush();
   box('doubao').click(); await flush();
   assert.deepEqual(calls.map(value => value.sites), [['deepseek', 'doubao', 'gpt'], ['doubao', 'gpt'], ['gpt']]);
   assert.equal(box('gpt').disabled, true);
-  const fixed = doc.querySelector('.navigation-required input'); assert.equal(fixed.checked, true); assert.equal(fixed.disabled, true);
+});
+
+test('顶部导航显示点开弹窗，勾选在窗口内切换，取消只关闭不回滚', async t => {
+  const { doc, calls } = await page(t);
+  const dialog = doc.querySelector('#navigation-dialog'), trigger = doc.querySelector('#navigation-open');
+  assert.equal(dialog.hidden, true); assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+  trigger.click(); await flush();
+  assert.equal(dialog.hidden, false); assert.equal(trigger.getAttribute('aria-expanded'), 'true');
+  const gemini = doc.querySelector('#navigation-fields input[value="gemini"]');
+  gemini.click(); await flush();
+  assert.equal(dialog.hidden, false);
+  assert.deepEqual(calls.at(-1), { sites: ['deepseek', 'doubao', 'gemini'] });
+  doc.querySelector('#navigation-dialog-cancel').click(); await flush();
+  assert.equal(dialog.hidden, true); assert.equal(trigger.getAttribute('aria-expanded'), 'false');
+  assert.equal(gemini.checked, true);
 });
 
 test('导航保存失败恢复原选择，旧偏好使用新默认值，新偏好保留用户选择', async t => {

@@ -1,4 +1,18 @@
 var AIBWebCommands = (function () {
+  // 只允许设置页打开这两个固定入口，避免网页侧传入任意地址。
+  var LINKS = {
+    'https://bbs.marginnote.com.cn/t/topic/68798': true,
+    'https://qiaomu-joe-garden.pages.dev/': true
+  };
+  function open(payload) {
+    var url = payload && payload.url;
+    if (typeof url !== 'string' || !LINKS[url]) throw new Error('链接无效');
+    if (typeof NSURL === 'undefined' || typeof NSURL.URLWithString !== 'function') throw new Error('当前无法打开网页，请稍后重试');
+    var target = NSURL.URLWithString(url), app = AIBNative.app();
+    if (!target || typeof app.openURL !== 'function') throw new Error('当前无法打开网页，请稍后重试');
+    app.openURL(target);
+    return { url: url };
+  }
   function receiveMedia(controller, command, payload, panel) {
     if (command !== 'receiveMedia') throw new Error('不支持的媒体命令');
     return AIBMedia.receive(controller, payload, panel);
@@ -21,6 +35,7 @@ var AIBWebCommands = (function () {
       else if (request.command === 'saveNavigation') {
         payload = AIBSettings.writeNavigation(request.payload); AIBPanel.refreshNavigation(controller);
       }
+      else if (request.command === 'openURL') payload = open(request.payload);
       else if (request.command === 'saveSettings') {
         if (!controller.uploadOperation || !controller.uploadOperation.customSettings) AIBUpload.cancel(controller);
         payload = AIBSettings.write(request.payload);
